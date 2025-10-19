@@ -1,0 +1,19 @@
+{
+	"features": [
+		{
+			"id": 1,
+			"title": "Fast & Lightweight",
+			"description": "Built with SvelteKit for optimal performance"
+		},
+		{
+			"id": 2,
+			"title": "SQLite Database",
+			"description": "Simple, reliable data storage with WAL mode"
+		},
+		{
+			"id": 3,
+			"title": "Ready to Use",
+			"description": "Pre-configured starter template for quick projects"
+		}
+	]
+}
