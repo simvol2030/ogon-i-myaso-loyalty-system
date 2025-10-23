@@ -26,41 +26,23 @@
   }
 </script>
 
-<div class="app-container">
-  <Header onMenuClick={openMenu} />
-  <MobileMenu open={menuOpen} onClose={closeMenu} />
+<section class="section-content">
+  <h2 class="section-header">
+    <span>🏪</span>
+    <span>Наши магазины</span>
+  </h2>
+  <div class="stores-list">
+    {#each data.stores as store}
+      <StoreCard {store} onClick={() => selectStore(store)} />
+    {/each}
+  </div>
+</section>
 
-  <main class="content">
-    <section class="section-content">
-      <h2 class="section-header">
-        <span>🏪</span>
-        <span>Наши магазины</span>
-      </h2>
-      <div class="stores-list">
-        {#each data.stores as store}
-          <StoreCard {store} onClick={() => selectStore(store)} />
-        {/each}
-      </div>
-    </section>
-  </main>
-
-  <StoreModal store={selectedStore} open={!!selectedStore} onClose={closeStoreModal} />
-</div>
+<StoreModal store={selectedStore} open={!!selectedStore} onClose={closeStoreModal} />
 
 <style>
-  .content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background: var(--bg-white);
-    -webkit-overflow-scrolling: touch;
-    margin-top: calc(64px + env(safe-area-inset-top));
-    padding-bottom: 24px;
-  }
-
   .section-content {
-    padding: 16px;
-    margin-bottom: 24px;
+    padding: 20px 16px 24px;
   }
 
   .section-header {
@@ -82,7 +64,7 @@
 
   @media (max-width: 480px) {
     .section-content {
-      padding: 12px;
+      padding: 20px 12px 24px;
     }
   }
 </style>

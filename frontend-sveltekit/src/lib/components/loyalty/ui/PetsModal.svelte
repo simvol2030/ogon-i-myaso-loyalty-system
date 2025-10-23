@@ -208,15 +208,18 @@
 	.pet-card {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-sm);
-		padding: var(--spacing-md);
-		background: var(--bg-secondary);
-		border-radius: var(--radius-md);
-		transition: all var(--transition-fast);
+		gap: 12px;
+		padding: 16px;
+		background: var(--bg-tertiary);
+		border-radius: 12px;
+		transition: all 0.2s ease;
+		border: 1px solid var(--border-color);
 	}
 
 	.pet-card:hover {
-		background: var(--bg-hover);
+		background: var(--card-hover);
+		transform: translateY(-2px);
+		box-shadow: var(--shadow);
 	}
 
 	.pet-icon {
@@ -226,8 +229,13 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--bg-primary);
-		border-radius: var(--radius-md);
+		background: var(--bg-white);
+		border-radius: 12px;
+		transition: transform 0.2s ease;
+	}
+
+	.pet-card:hover .pet-icon {
+		transform: scale(1.1);
 	}
 
 	.pet-info {
@@ -278,17 +286,19 @@
 
 	.add-pet-button {
 		width: 100%;
-		margin-top: var(--spacing-sm);
+		margin-top: 12px;
 	}
 
 	.add-pet-form {
-		background: var(--bg-secondary);
-		padding: var(--spacing-lg);
-		border-radius: var(--radius-md);
+		background: var(--bg-tertiary);
+		padding: 20px;
+		border-radius: 12px;
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-md);
+		gap: 16px;
 		animation: slideIn 0.3s ease-out;
+		border: 1px solid var(--border-color);
+		transition: background-color 0.05s ease, border-color 0.05s ease;
 	}
 
 	@keyframes slideIn {
@@ -315,20 +325,21 @@
 
 	.add-pet-form select,
 	.add-pet-form input {
-		padding: var(--spacing-sm) var(--spacing-md);
+		padding: 12px 16px;
 		border: 1px solid var(--border-color);
-		border-radius: var(--radius-sm);
-		font-size: var(--text-base);
-		background: var(--bg-primary);
+		border-radius: 12px;
+		font-size: 15px;
+		background: var(--bg-light);
 		color: var(--text-primary);
-		transition: all var(--transition-fast);
+		transition: all 0.2s ease;
 	}
 
 	.add-pet-form select:focus,
 	.add-pet-form input:focus {
 		outline: none;
-		border-color: var(--accent);
-		box-shadow: 0 0 0 3px rgba(255, 119, 0, 0.1);
+		border-color: var(--primary-orange);
+		background: var(--bg-white);
+		box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
 	}
 
 	.form-actions {
@@ -342,33 +353,39 @@
 	}
 
 	.button {
-		padding: var(--spacing-sm) var(--spacing-lg);
+		padding: 12px 24px;
 		border: none;
-		border-radius: var(--radius-md);
-		font-size: var(--text-base);
-		font-weight: var(--font-semibold);
+		border-radius: 12px;
+		font-size: 15px;
+		font-weight: 600;
 		cursor: pointer;
-		transition: all var(--transition-fast);
+		transition: all 0.2s ease;
 	}
 
 	.button-primary {
-		background: var(--accent);
+		background: var(--primary-orange);
 		color: white;
 	}
 
 	.button-primary:hover {
-		background: var(--accent-hover);
+		background: var(--primary-orange-dark);
 		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(255, 119, 0, 0.2);
+		box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+	}
+
+	.button-primary:active {
+		transform: translateY(0);
 	}
 
 	.button-secondary {
-		background: var(--bg-secondary);
+		background: var(--bg-tertiary);
 		color: var(--text-primary);
+		border: 1px solid var(--border-color);
 	}
 
 	.button-secondary:hover {
-		background: var(--bg-hover);
+		background: var(--card-hover);
+		border-color: var(--primary-orange);
 	}
 
 	@media (min-width: 768px) {

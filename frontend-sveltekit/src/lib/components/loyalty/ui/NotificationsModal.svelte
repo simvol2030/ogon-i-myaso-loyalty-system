@@ -93,15 +93,18 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: var(--spacing-md);
-		padding: var(--spacing-md);
-		background: var(--bg-secondary);
-		border-radius: var(--radius-md);
-		transition: all var(--transition-fast);
+		gap: 16px;
+		padding: 16px;
+		background: var(--bg-tertiary);
+		border-radius: 12px;
+		transition: all 0.2s ease;
+		border: 1px solid var(--border-color);
 	}
 
 	.setting-item:hover {
-		background: var(--bg-hover);
+		background: var(--card-hover);
+		border-color: var(--primary-orange);
+		transform: translateX(2px);
 	}
 
 	.setting-info {
@@ -143,9 +146,9 @@
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background-color: var(--bg-secondary);
+		background-color: var(--bg-light);
 		border: 2px solid var(--border-color);
-		transition: all var(--transition-base);
+		transition: all 0.3s ease;
 		border-radius: 28px;
 	}
 
@@ -156,14 +159,15 @@
 		width: 20px;
 		left: 2px;
 		bottom: 2px;
-		background-color: var(--text-secondary);
-		transition: all var(--transition-base);
+		background-color: var(--text-tertiary);
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 		border-radius: 50%;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 	}
 
 	input:checked + .toggle-slider {
-		background-color: var(--accent);
-		border-color: var(--accent);
+		background-color: var(--primary-orange);
+		border-color: var(--primary-orange);
 	}
 
 	input:checked + .toggle-slider:before {
@@ -172,38 +176,38 @@
 	}
 
 	input:focus + .toggle-slider {
-		box-shadow: 0 0 0 3px rgba(255, 119, 0, 0.1);
+		box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15);
 	}
 
 	.toggle-slider:hover {
-		border-color: var(--accent);
+		border-color: var(--primary-orange);
 	}
 
 	/* Button */
 	.button {
 		width: 100%;
-		padding: var(--spacing-md) var(--spacing-lg);
+		padding: 14px 24px;
 		border: none;
-		border-radius: var(--radius-md);
-		font-size: var(--text-base);
-		font-weight: var(--font-semibold);
+		border-radius: 12px;
+		font-size: 15px;
+		font-weight: 600;
 		cursor: pointer;
-		transition: all var(--transition-fast);
+		transition: all 0.2s ease;
 	}
 
 	.button-primary {
-		background: var(--accent);
+		background: var(--primary-orange);
 		color: white;
 	}
 
 	.button-primary:hover {
-		background: var(--accent-hover);
+		background: var(--primary-orange-dark);
 		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(255, 119, 0, 0.2);
+		box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
 	}
 
 	.button-primary:active {
-		transform: translateY(0);
+		transform: scale(0.98);
 	}
 
 	@media (min-width: 768px) {

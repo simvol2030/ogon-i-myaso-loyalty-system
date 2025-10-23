@@ -47,13 +47,27 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    animation: slideInRight 0.3s ease;
+    animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-left: 4px solid;
+    transition: all 0.05s ease;
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .toast::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    opacity: 0.2;
   }
 
   @keyframes slideInRight {
     from {
-      transform: translateX(100%);
+      transform: translateX(calc(100% + 20px));
       opacity: 0;
     }
     to {
@@ -66,16 +80,32 @@
     border-left-color: var(--secondary-green);
   }
 
+  .toast-success::before {
+    background: var(--secondary-green);
+  }
+
   .toast-error {
     border-left-color: #ef4444;
+  }
+
+  .toast-error::before {
+    background: #ef4444;
   }
 
   .toast-info {
     border-left-color: var(--primary-orange);
   }
 
+  .toast-info::before {
+    background: var(--primary-orange);
+  }
+
   .toast-warning {
     border-left-color: #f59e0b;
+  }
+
+  .toast-warning::before {
+    background: #f59e0b;
   }
 
   .toast-icon {
@@ -87,6 +117,8 @@
     flex: 1;
     color: var(--text-primary);
     font-size: 14px;
+    font-weight: 500;
+    transition: color 0.05s ease;
   }
 
   .toast-close {
@@ -94,18 +126,23 @@
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 4px;
+    padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 6px;
     transition: all 0.2s ease;
     flex-shrink: 0;
   }
 
   .toast-close:hover {
-    background: var(--bg-secondary);
+    background: var(--bg-tertiary);
     color: var(--text-primary);
+    transform: scale(1.1);
+  }
+
+  .toast-close:active {
+    transform: scale(0.95);
   }
 
   @media (max-width: 480px) {
@@ -117,7 +154,7 @@
     }
 
     .toast {
-      padding: 12px;
+      padding: 14px;
     }
 
     .toast-icon {

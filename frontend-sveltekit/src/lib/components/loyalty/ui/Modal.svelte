@@ -50,7 +50,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,13 +71,15 @@
 
   .modal-content {
     background: var(--card-bg);
-    border-radius: 20px;
+    border-radius: 16px;
     max-width: 500px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
     animation: slideUp 0.3s ease;
+    transition: background-color 0.05s ease, border-color 0.05s ease;
+    border: 1px solid var(--border-color);
   }
 
   .modal-content-large {
@@ -100,6 +103,7 @@
     align-items: center;
     padding: 20px 24px;
     border-bottom: 1px solid var(--border-color);
+    transition: border-color 0.05s ease;
   }
 
   .modal-title {
@@ -107,6 +111,7 @@
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
+    transition: color 0.05s ease;
   }
 
   .close-button {
@@ -114,7 +119,7 @@
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 4px;
+    padding: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -123,8 +128,13 @@
   }
 
   .close-button:hover {
-    background: var(--bg-secondary);
+    background: var(--bg-tertiary);
     color: var(--text-primary);
+    transform: scale(1.05);
+  }
+
+  .close-button:active {
+    transform: scale(0.95);
   }
 
   .modal-body {
@@ -138,6 +148,7 @@
 
     .modal-content {
       max-height: 95vh;
+      border-radius: 16px;
     }
 
     .modal-header {

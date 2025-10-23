@@ -244,15 +244,37 @@
 	.payment-card {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-sm);
-		padding: var(--spacing-md);
-		background: var(--bg-secondary);
-		border-radius: var(--radius-md);
-		transition: all var(--transition-fast);
+		gap: 12px;
+		padding: 16px;
+		background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--card-bg) 100%);
+		border-radius: 12px;
+		transition: all 0.3s ease;
+		border: 1px solid var(--border-color);
+		position: relative;
+		overflow: hidden;
+	}
+
+	.payment-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 4px;
+		height: 100%;
+		background: var(--primary-orange);
+		opacity: 0;
+		transition: opacity 0.3s ease;
 	}
 
 	.payment-card:hover {
-		background: var(--bg-hover);
+		background: var(--card-hover);
+		transform: translateY(-2px);
+		box-shadow: var(--shadow);
+		border-color: var(--primary-orange);
+	}
+
+	.payment-card:hover::before {
+		opacity: 1;
 	}
 
 	.card-icon {
@@ -262,8 +284,13 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--bg-primary);
-		border-radius: var(--radius-md);
+		background: linear-gradient(135deg, var(--primary-orange-light), var(--primary-orange));
+		border-radius: 12px;
+		transition: transform 0.3s ease;
+	}
+
+	.payment-card:hover .card-icon {
+		transform: scale(1.1) rotate(5deg);
 	}
 
 	.card-info {
@@ -315,13 +342,15 @@
 	}
 
 	.add-card-form {
-		background: var(--bg-secondary);
-		padding: var(--spacing-lg);
-		border-radius: var(--radius-md);
+		background: var(--bg-tertiary);
+		padding: 20px;
+		border-radius: 12px;
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-md);
+		gap: 16px;
 		animation: slideIn 0.3s ease-out;
+		border: 1px solid var(--border-color);
+		transition: background-color 0.05s ease, border-color 0.05s ease;
 	}
 
 	@keyframes slideIn {
@@ -347,19 +376,22 @@
 	}
 
 	.add-card-form input {
-		padding: var(--spacing-sm) var(--spacing-md);
+		padding: 12px 16px;
 		border: 1px solid var(--border-color);
-		border-radius: var(--radius-sm);
-		font-size: var(--text-base);
-		background: var(--bg-primary);
+		border-radius: 12px;
+		font-size: 15px;
+		background: var(--bg-light);
 		color: var(--text-primary);
-		transition: all var(--transition-fast);
+		transition: all 0.2s ease;
+		font-family: 'Courier New', monospace;
 	}
 
 	.add-card-form input:focus {
 		outline: none;
-		border-color: var(--accent);
-		box-shadow: 0 0 0 3px rgba(255, 119, 0, 0.1);
+		border-color: var(--primary-orange);
+		background: var(--bg-white);
+		box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+		transform: translateY(-1px);
 	}
 
 	.form-row {
@@ -377,15 +409,21 @@
 	.payment-security-note {
 		display: flex;
 		align-items: flex-start;
-		gap: var(--spacing-sm);
-		padding: var(--spacing-md);
-		background: var(--bg-primary);
-		border-radius: var(--radius-sm);
+		gap: 12px;
+		padding: 12px 16px;
+		background: var(--bg-light);
+		border-radius: 12px;
 		border: 1px solid var(--border-color);
+		transition: all 0.2s ease;
+	}
+
+	.payment-security-note:hover {
+		border-color: var(--secondary-green);
+		background: var(--bg-white);
 	}
 
 	.payment-security-note svg {
-		color: var(--accent);
+		color: var(--secondary-green);
 		flex-shrink: 0;
 		margin-top: 2px;
 	}
@@ -408,33 +446,39 @@
 	}
 
 	.button {
-		padding: var(--spacing-sm) var(--spacing-lg);
+		padding: 12px 24px;
 		border: none;
-		border-radius: var(--radius-md);
-		font-size: var(--text-base);
-		font-weight: var(--font-semibold);
+		border-radius: 12px;
+		font-size: 15px;
+		font-weight: 600;
 		cursor: pointer;
-		transition: all var(--transition-fast);
+		transition: all 0.2s ease;
 	}
 
 	.button-primary {
-		background: var(--accent);
+		background: var(--primary-orange);
 		color: white;
 	}
 
 	.button-primary:hover {
-		background: var(--accent-hover);
+		background: var(--primary-orange-dark);
 		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(255, 119, 0, 0.2);
+		box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+	}
+
+	.button-primary:active {
+		transform: scale(0.98);
 	}
 
 	.button-secondary {
-		background: var(--bg-secondary);
+		background: var(--bg-tertiary);
 		color: var(--text-primary);
+		border: 1px solid var(--border-color);
 	}
 
 	.button-secondary:hover {
-		background: var(--bg-hover);
+		background: var(--card-hover);
+		border-color: var(--primary-orange);
 	}
 
 	@media (min-width: 768px) {

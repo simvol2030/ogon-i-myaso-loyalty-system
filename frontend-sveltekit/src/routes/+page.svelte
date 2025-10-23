@@ -12,39 +12,47 @@
 
 <!-- 2. Акции месяца -->
 <section class="section-content">
-  <div class="section-header-with-link">
-    <h2 class="section-header">
-      <span>🎉</span>
-      <span>Акции месяца</span>
-    </h2>
-    <a href="/offers" class="see-all">Все акции →</a>
-  </div>
+  <h2 class="section-header centered">
+    <span>🎉</span>
+    <span>Акции месяца</span>
+  </h2>
   <div class="offers-list">
     {#each data.monthOffers as offer}
       <OfferCardCompact {offer} />
     {/each}
   </div>
+  <a href="/offers" class="see-all-link">
+    <span>Все акции</span>
+    <span>→</span>
+  </a>
 </section>
+
+<!-- Section Divider -->
+<div class="section-divider"></div>
 
 <!-- 3. Топовые товары -->
 <section class="section-content">
-  <div class="section-header-with-link">
-    <h2 class="section-header">
-      <span>⭐</span>
-      <span>Топовые товары</span>
-    </h2>
-    <a href="/products" class="see-all">Все товары →</a>
-  </div>
+  <h2 class="section-header centered">
+    <span>⭐</span>
+    <span>Топовые товары</span>
+  </h2>
   <div class="products-grid">
     {#each data.topProducts as product}
       <ProductCard {product} />
     {/each}
   </div>
+  <a href="/products" class="see-all-link">
+    <span>Все товары</span>
+    <span>→</span>
+  </a>
 </section>
+
+<!-- Section Divider -->
+<div class="section-divider"></div>
 
 <!-- 4. Рекомендации для вашего питомца -->
 <section class="section-content">
-  <h2 class="section-header">
+  <h2 class="section-header centered">
     <span>🐾</span>
     <span>Рекомендации для вашего питомца</span>
   </h2>
@@ -61,36 +69,46 @@
     margin-bottom: 24px;
   }
 
-  .section-header-with-link {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-
   .section-header {
     font-size: 20px;
     font-weight: bold;
     color: var(--text-primary);
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     letter-spacing: -0.025em;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 0;
   }
 
-  .see-all {
-    font-size: 14px;
+  .section-header.centered {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .section-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 32px 16px;
+  }
+
+  .see-all-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+    font-size: 15px;
     color: var(--primary-orange);
     text-decoration: none;
     font-weight: 600;
-    transition: opacity 0.2s;
-    white-space: nowrap;
+    transition: all 0.2s ease;
+    padding: 8px;
+    border-radius: 8px;
   }
 
-  .see-all:hover {
-    opacity: 0.8;
+  .see-all-link:hover {
+    background: var(--bg-tertiary);
+    transform: translateX(2px);
   }
 
   .offers-list {
@@ -114,6 +132,10 @@
   @media (max-width: 480px) {
     .section-content {
       padding: 0 12px;
+    }
+
+    .section-divider {
+      margin: 24px 12px;
     }
 
     .products-grid {

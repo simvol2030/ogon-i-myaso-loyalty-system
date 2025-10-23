@@ -40,12 +40,40 @@
 
 <style>
   .profile-card {
-    background: var(--card-bg);
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-orange-dark), var(--accent-red));
     border-radius: 20px;
     padding: 20px;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.5);
     border: 1px solid var(--border-color);
     margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .profile-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.15) 50%,
+      transparent 70%
+    );
+    animation: shimmer 3s infinite;
+    pointer-events: none;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    100% {
+      transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
   }
 
   .profile-header {
@@ -53,6 +81,8 @@
     align-items: center;
     gap: 16px;
     margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
   }
 
   .profile-avatar {
@@ -76,12 +106,12 @@
   .profile-name {
     font-size: 20px;
     font-weight: bold;
-    color: var(--text-primary);
+    color: white;
     margin-bottom: 4px;
   }
 
   .profile-status {
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
   }
 
@@ -90,7 +120,9 @@
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     padding-top: 20px;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    z-index: 1;
   }
 
   .profile-stat-item {
@@ -101,18 +133,19 @@
     font-size: 32px;
     font-weight: bold;
     margin-bottom: 4px;
+    color: white;
   }
 
   .profile-stat-orange {
-    color: var(--primary-orange);
+    color: white;
   }
 
   .profile-stat-green {
-    color: var(--secondary-green);
+    color: white;
   }
 
   .profile-stat-label {
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.85);
     font-size: 13px;
     font-weight: 500;
   }

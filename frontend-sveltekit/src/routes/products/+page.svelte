@@ -15,39 +15,21 @@
   }
 </script>
 
-<div class="app-container">
-  <Header onMenuClick={openMenu} />
-  <MobileMenu open={menuOpen} onClose={closeMenu} />
-
-  <main class="content">
-    <section class="section-content">
-      <h2 class="section-header">
-        <span>🛍️</span>
-        <span>Топовые товары</span>
-      </h2>
-      <div class="products-grid">
-        {#each data.products as product}
-          <ProductCard {product} />
-        {/each}
-      </div>
-    </section>
-  </main>
-</div>
+<section class="section-content">
+  <h2 class="section-header">
+    <span>🛍️</span>
+    <span>Топовые товары</span>
+  </h2>
+  <div class="products-grid">
+    {#each data.products as product}
+      <ProductCard {product} />
+    {/each}
+  </div>
+</section>
 
 <style>
-  .content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background: var(--bg-white);
-    -webkit-overflow-scrolling: touch;
-    margin-top: calc(64px + env(safe-area-inset-top));
-    padding-bottom: 24px;
-  }
-
   .section-content {
-    padding: 16px;
-    margin-bottom: 24px;
+    padding: 20px 16px 24px;
   }
 
   .section-header {
@@ -69,7 +51,7 @@
 
   @media (max-width: 480px) {
     .section-content {
-      padding: 12px;
+      padding: 20px 12px 24px;
     }
 
     .products-grid {
