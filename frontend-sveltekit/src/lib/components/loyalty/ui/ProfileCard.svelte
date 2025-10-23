@@ -21,43 +21,57 @@
 
   // Initialize Telegram user on mount
   onMount(async () => {
+    console.log('[ProfileCard] Mounting component...');
+
     const telegramUser = getTelegramUser();
+    console.log('[ProfileCard] Telegram user from SDK:', telegramUser);
 
     // If running in Telegram Web App, initialize user
     if (telegramUser) {
+      console.log('[ProfileCard] Running in Telegram Web App mode');
       try {
         // TODO: Extract store_id from URL parameter when implementing QR codes
         // For now, store_id is undefined (will be added later)
+        console.log('[ProfileCard] Calling initializeUser()...');
         const result = await initializeUser();
+        console.log('[ProfileCard] initializeUser() result:', result);
 
         if (result && result.success) {
           // Merge Telegram user data with existing user structure
+          const newName = `${result.user.first_name}${result.user.last_name ? ' ' + result.user.last_name : ''}`;
+          console.log('[ProfileCard] Updating displayUser with name:', newName, 'balance:', result.user.current_balance);
+
           displayUser = {
             ...user,
-            name: `${result.user.first_name}${result.user.last_name ? ' ' + result.user.last_name : ''}`,
+            name: newName,
             currentBalance: result.user.current_balance,
             // Keep other fields from demo user.json for now
             // (totalPurchases, totalSaved, etc. will come from database later)
           };
 
-          console.log('Telegram user initialized:', {
+          console.log('[ProfileCard] Telegram user initialized:', {
             isNewUser: result.isNewUser,
             bonus: result.isNewUser ? '500 Murzikoyns awarded' : 'Welcome back',
-            balance: result.user.current_balance
+            displayUserName: displayUser.name,
+            displayUserBalance: displayUser.currentBalance
           });
+        } else {
+          console.error('[ProfileCard] initializeUser() returned unsuccessful result');
         }
       } catch (error) {
-        console.error('Failed to initialize Telegram user:', error);
+        console.error('[ProfileCard] Failed to initialize Telegram user:', error);
         // Fall back to demo user from props
         displayUser = user;
       }
     } else {
       // Not in Telegram Web App - use demo user
-      console.log('Demo mode: Not running in Telegram Web App');
+      console.log('[ProfileCard] Demo mode: Not running in Telegram Web App');
+      console.log('[ProfileCard] Using demo user:', user.name);
       displayUser = user;
     }
 
     isLoading = false;
+    console.log('[ProfileCard] Mount complete. Final displayUser:', displayUser.name);
   });
 </script>
 
