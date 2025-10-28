@@ -7,7 +7,8 @@
 	import CustomerSearch from './components/CustomerSearch.svelte';
 	import CustomerInfo from './components/CustomerInfo.svelte';
 	import CheckAmountInput from './components/CheckAmountInput.svelte';
-	import RedeemControl from './components/RedeemControl.svelte';
+	import CheckSummary from './components/CheckSummary.svelte';
+	import RedeemChoice from './components/RedeemChoice.svelte';
 	import TransactionButtons from './components/TransactionButtons.svelte';
 	import TransactionStatus from './components/TransactionStatus.svelte';
 	import RecentTransactions from './components/RecentTransactions.svelte';
@@ -30,8 +31,8 @@
 	let checkAmountInput = $state('');
 	let checkAmount = $state(0);
 
-	// ===== Списание баллов =====
-	let pointsToRedeem = $state(0);
+	// ===== Выбор: списать или накапливать =====
+	let isRedeemSelected = $state(true); // По умолчанию "Списать"
 
 	// ===== История транзакций =====
 	let recentTransactions = $state<Transaction[]>([]);
@@ -56,8 +57,13 @@
 		return customer !== null && customer.balance > 0 && maxRedeemPoints() > 0;
 	});
 
+	// Сумма списания зависит от выбора пользователя
+	let pointsToRedeem = $derived(() => {
+		return isRedeemSelected ? maxRedeemPoints() : 0;
+	});
+
 	let finalAmount = $derived(() => {
-		return Math.max(0, checkAmount - pointsToRedeem);
+		return Math.max(0, checkAmount - pointsToRedeem());
 	});
 
 	// ===== Загрузка истории при монтировании =====
@@ -97,21 +103,17 @@
 		const amount = parseFloat(checkAmountInput);
 		if (amount > 0) {
 			checkAmount = amount;
+			isRedeemSelected = true; // По умолчанию "Списать" при переходе на шаг 3
 			uiState = 'ready';
 		}
 	}
 
-	function handleRedeemChange(points: number) {
-		const max = maxRedeemPoints();
-		pointsToRedeem = Math.min(points, max);
+	function handleRedeemSelect() {
+		isRedeemSelected = true;
 	}
 
-	function handleRedeemMax() {
-		pointsToRedeem = maxRedeemPoints();
-	}
-
-	function handleRedeemNone() {
-		pointsToRedeem = 0;
+	function handleAccumulateSelect() {
+		isRedeemSelected = false;
 	}
 
 	async function handleCompleteTransaction() {
@@ -123,14 +125,14 @@
 			customer,
 			storeId: data.storeId,
 			checkAmount,
-			pointsToRedeem,
+			pointsToRedeem: pointsToRedeem(),
 			cashbackAmount: cashbackAmount(),
 			finalAmount: finalAmount()
 		});
 
 		if (result.success) {
 			// Обновляем баланс клиента в локальном состоянии
-			customer.balance = customer.balance - pointsToRedeem + cashbackAmount();
+			customer.balance = customer.balance - pointsToRedeem() + cashbackAmount();
 
 			uiState = 'success';
 
@@ -149,7 +151,7 @@
 	function resetTransaction() {
 		customer = null;
 		checkAmount = 0;
-		pointsToRedeem = 0;
+		isRedeemSelected = true; // Сброс на "Списать" по умолчанию
 		qrInput = '';
 		checkAmountInput = '';
 		uiState = 'idle';
@@ -163,7 +165,7 @@
 	<!-- Header -->
 	<div class="header">
 		<div class="header-title">
-			💳 {data.storeConfig.storeName}
+			💳 {data.storeConfig.storeName} • {data.storeConfig.location}
 		</div>
 	</div>
 
@@ -196,20 +198,28 @@
 
 		<!-- Шаг 3: Чек готов, выбор списания баллов -->
 		{#if uiState === 'ready' && customer}
-			<CustomerInfo {customer} />
+			<!-- Две карточки рядом: CustomerInfo + CheckSummary -->
+			<div class="grid-2 mb-2">
+				<CustomerInfo {customer} />
+				<CheckSummary
+					{checkAmount}
+					cashbackPercent={data.storeConfig.cashbackPercent}
+					cashbackAmount={cashbackAmount()}
+					finalAmount={finalAmount()}
+				/>
+			</div>
 
-			<RedeemControl
-				{checkAmount}
-				customerBalance={customer.balance}
-				storeConfig={data.storeConfig}
-				bind:pointsToRedeem
+			<!-- Выбор: списать или накапливать -->
+			<RedeemChoice
 				maxRedeemPoints={maxRedeemPoints()}
-				canRedeem={canRedeem()}
-				onRedeemChange={handleRedeemChange}
-				onRedeemMax={handleRedeemMax}
-				onRedeemNone={handleRedeemNone}
+				currentBalance={customer.balance}
+				cashbackAmount={cashbackAmount()}
+				isRedeemSelected={isRedeemSelected}
+				onRedeemSelect={handleRedeemSelect}
+				onAccumulateSelect={handleAccumulateSelect}
 			/>
 
+			<!-- Кнопки завершения/отмены -->
 			<TransactionButtons
 				onComplete={handleCompleteTransaction}
 				onCancel={resetTransaction}
@@ -226,7 +236,7 @@
 			<TransactionStatus
 				status="success"
 				finalAmount={finalAmount()}
-				pointsRedeemed={pointsToRedeem}
+				pointsRedeemed={pointsToRedeem()}
 				cashbackEarned={cashbackAmount()}
 				newBalance={customer.balance}
 			/>
@@ -276,7 +286,8 @@
 	}
 
 	.app-container {
-		width: 100vw;
+		width: calc(100vw + 230px);
+		min-width: 1030px;
 		height: 100vh;
 		display: flex;
 		flex-direction: column;

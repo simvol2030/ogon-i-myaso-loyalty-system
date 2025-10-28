@@ -8,7 +8,7 @@
 </script>
 
 <button class="btn btn-primary mt-3" onclick={onComplete}>
-	Завершить транзакцию
+	Провести оплату
 </button>
 
 <button class="btn btn-secondary mt-2" onclick={onCancel}>

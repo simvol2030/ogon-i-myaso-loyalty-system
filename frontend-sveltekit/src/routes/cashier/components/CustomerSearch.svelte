@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { QUICK_TESTS } from '$lib/data/cashier-mocks';
+	import VirtualKeyboard from './VirtualKeyboard.svelte';
 
 	interface Props {
 		value: string;
@@ -12,9 +13,55 @@
 	let { value = $bindable(''), isSearching, errorMessage, onSearch, onInput }: Props = $props();
 
 	let inputRef: HTMLInputElement;
+	let autoSearchTimer: number | null = null;
+	let isKeyboardOpen = $state(false);
 
 	export function focus() {
 		inputRef?.focus();
+	}
+
+	function handleInput(e: Event) {
+		const newValue = (e.currentTarget as HTMLInputElement).value;
+		onInput(newValue);
+
+		// Сбросить предыдущий таймер
+		if (autoSearchTimer) {
+			clearTimeout(autoSearchTimer);
+			autoSearchTimer = null;
+		}
+
+		// Если введено ровно 6 цифр → автопоиск через 1 сек
+		if (newValue.length === 6 && /^\d{6}$/.test(newValue)) {
+			autoSearchTimer = setTimeout(() => {
+				onSearch();
+			}, 1000) as unknown as number;
+		}
+	}
+
+	function openVirtualKeyboard() {
+		isKeyboardOpen = true;
+	}
+
+	function closeVirtualKeyboard() {
+		isKeyboardOpen = false;
+	}
+
+	function handleKeyboardInput(newValue: string) {
+		onInput(newValue);
+
+		// Сбросить предыдущий таймер
+		if (autoSearchTimer) {
+			clearTimeout(autoSearchTimer);
+			autoSearchTimer = null;
+		}
+
+		// Если введено ровно 6 цифр → автопоиск через 1 сек
+		if (newValue.length === 6 && /^\d{6}$/.test(newValue)) {
+			autoSearchTimer = setTimeout(() => {
+				onSearch();
+				closeVirtualKeyboard();
+			}, 1000) as unknown as number;
+		}
 	}
 </script>
 
@@ -25,18 +72,31 @@
 		bind:value
 		class="input mb-2"
 		type="text"
+		inputmode="numeric"
+		pattern="[0-9]*"
 		placeholder="6-значный номер карты (например: 421856)"
 		onkeydown={(e) => e.key === 'Enter' && onSearch()}
-		oninput={(e) => onInput(e.currentTarget.value)}
+		oninput={handleInput}
 		disabled={isSearching}
 	/>
-	<button
-		class="btn btn-primary"
-		onclick={onSearch}
-		disabled={!value || isSearching}
-	>
-		{isSearching ? 'Поиск...' : 'Найти клиента'}
-	</button>
+
+	<div class="button-group">
+		<button
+			class="btn btn-primary"
+			onclick={onSearch}
+			disabled={!value || isSearching}
+		>
+			{isSearching ? 'Поиск...' : 'Найти клиента'}
+		</button>
+
+		<button
+			class="btn btn-secondary"
+			onclick={openVirtualKeyboard}
+			disabled={isSearching}
+		>
+			🔢 Клавиатура
+		</button>
+	</div>
 	{#if errorMessage}
 		<p class="text-center mt-2" style="color: var(--danger);">{errorMessage}</p>
 	{/if}
@@ -59,7 +119,30 @@
 	</div>
 </div>
 
+<VirtualKeyboard
+	{value}
+	onInput={handleKeyboardInput}
+	isOpen={isKeyboardOpen}
+	onClose={closeVirtualKeyboard}
+/>
+
 <style>
+	/* Переопределяем цвет текста input для видимости */
+	:global(.input) {
+		color: #ffffff !important;
+	}
+
+	:global(.input::placeholder) {
+		color: var(--text-secondary) !important;
+		opacity: 0.6;
+	}
+
+	.button-group {
+		display: grid;
+		grid-template-columns: 2fr 1fr;
+		gap: 8px;
+	}
+
 	.test-buttons {
 		display: flex;
 		gap: 8px;
