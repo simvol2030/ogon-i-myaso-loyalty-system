@@ -166,11 +166,11 @@
   <div class="profile-stats">
     <div class="profile-stat-item">
       <div class="profile-stat-value profile-stat-orange">{displayUser.totalPurchases}</div>
-      <div class="profile-stat-label">Покупок</div>
+      <div class="profile-stat-label">Покупок за 45 дней</div>
     </div>
     <div class="profile-stat-item">
       <div class="profile-stat-value profile-stat-green">{formatNumber(displayUser.totalSaved)}</div>
-      <div class="profile-stat-label">Сэкономлено</div>
+      <div class="profile-stat-label">Сэкономлено за 45 дней</div>
     </div>
   </div>
 </div>

@@ -1,22 +1,21 @@
 import { db } from '../db/client';
 import { transactions } from '../db/schema';
 import { lt, sql } from 'drizzle-orm';
+import { getCleanupCutoffDate, RETENTION_DAYS, CLEANUP_GRACE_PERIOD } from '../utils/retention';
 
 /**
- * Cleanup old transactions (older than 45 days)
+ * Cleanup old transactions (older than 46 days with grace period)
  *
- * This function deletes transactions that are older than 45 days
- * to comply with the data retention policy and match loyalty points expiry period.
+ * This function deletes transactions that are older than 46 days
+ * (45 days retention + 1 day grace period to prevent race conditions).
  *
  * @param dryRun - If true, only count records without deleting
  * @returns Number of records deleted (or that would be deleted in dry-run mode)
  */
 export async function cleanupOldTransactions(dryRun: boolean = false): Promise<number> {
 	try {
-		// Calculate cutoff date (45 days ago - matches loyalty points expiry)
-		const cutoffDate = new Date();
-		cutoffDate.setDate(cutoffDate.getDate() - 45);
-		const cutoffIso = cutoffDate.toISOString();
+		// Calculate cutoff date with grace period (prevents race condition)
+		const cutoffIso = getCleanupCutoffDate();
 
 		console.log(`[CLEANUP] Cutoff date: ${cutoffIso} (dry-run: ${dryRun})`);
 

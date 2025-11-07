@@ -3,6 +3,7 @@ import { transactions, loyaltyUsers } from '$lib/server/db/schema';
 import { desc, eq, gte, and } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 import { EXAMPLE_TRANSACTIONS } from '$lib/data/loyalty/history_examples';
+import { getRetentionCutoffDate, RETENTION_DAYS } from '$lib/utils/retention';
 
 /**
  * Data loader for Transaction History page
@@ -43,12 +44,10 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
 	console.log('[history/+page.server.ts] Loading history for telegram_user_id:', telegramUserId);
 
-	// Calculate 45 days ago cutoff date (matches loyalty points expiry)
-	const fortyFiveDaysAgo = new Date();
-	fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
-	const cutoffDate = fortyFiveDaysAgo.toISOString();
+	// Get centralized cutoff date (prevents race conditions)
+	const cutoffDate = getRetentionCutoffDate();
 
-	console.log('[history/+page.server.ts] Loading transactions since:', cutoffDate);
+	console.log(`[history/+page.server.ts] Loading transactions since (last ${RETENTION_DAYS} days):`, cutoffDate);
 
 	// FIX #1: JOIN with loyalty_users to get loyalty_user.id
 	// telegram_user_id (123456789) → loyalty_user.id (1, 2, 3...)

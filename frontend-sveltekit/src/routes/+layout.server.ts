@@ -2,6 +2,7 @@ import { db } from '$lib/server/db/client';
 import { loyaltyUsers, transactions } from '$lib/server/db/schema';
 import { eq, gte, and, count, sum, sql } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
+import { getRetentionCutoffDate, RETENTION_DAYS } from '$lib/utils/retention';
 
 /**
  * Root layout data loader
@@ -10,7 +11,8 @@ import type { LayoutServerLoad } from './$types';
  * - Loads demo user as fallback (for testing in browser)
  * - Loads REAL user stats (totalPurchases, totalSaved) calculated from last 45 days of transactions
  * - Matches loyalty points expiry period (45 days)
- * - ProfileCard component merges Telegram SDK data instantly
+ * - Uses centralized retention utility to prevent race conditions
+ * - ProfileCard component displays stats with "за 45 дней" label
  */
 export const load: LayoutServerLoad = async ({ cookies }) => {
   // Get telegram_user_id from cookie (set by /api/telegram/init)
@@ -46,17 +48,15 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
         .limit(1);
 
       if (loyaltyUser) {
-        // Calculate 45 days ago cutoff (matches loyalty points expiry)
-        const fortyFiveDaysAgo = new Date();
-        fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
-        const cutoffDate = fortyFiveDaysAgo.toISOString();
+        // Get centralized cutoff date (prevents race conditions)
+        const cutoffDate = getRetentionCutoffDate();
 
         // Calculate stats from last 45 days of transactions
         // totalPurchases: count of 'earn' type transactions (each purchase earns points)
         // totalSaved: sum of money saved by redeeming points (amount field for 'spend' type)
         const [stats] = await db
           .select({
-            purchaseCount: sql<number>`COUNT(CASE WHEN ${transactions.type} = 'earn' THEN 1 END)`,
+            purchaseCount: sql<number>`COALESCE(COUNT(CASE WHEN ${transactions.type} = 'earn' THEN 1 END), 0)`,
             totalSaved: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'spend' THEN ABS(${transactions.amount}) ELSE 0 END), 0)`
           })
           .from(transactions)
@@ -76,11 +76,12 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
           totalSaved: stats?.totalSaved ?? 0
         };
         isDemoMode = false;
-        console.log('[+layout.server.ts] Loaded real user stats from last 45 days:', {
+        console.log(`[+layout.server.ts] Loaded real user stats (last ${RETENTION_DAYS} days):`, {
           telegram_user_id: telegramUserId,
           totalPurchases: user.totalPurchases,
           totalSaved: user.totalSaved,
-          cutoffDate
+          cutoffDate,
+          retention_days: RETENTION_DAYS
         });
       }
     }
