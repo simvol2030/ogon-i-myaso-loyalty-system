@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db/client';
 import { transactions, loyaltyUsers } from '$lib/server/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, gte, and } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 import { EXAMPLE_TRANSACTIONS } from '$lib/data/loyalty/history_examples';
 
@@ -43,8 +43,16 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
 	console.log('[history/+page.server.ts] Loading history for telegram_user_id:', telegramUserId);
 
+	// Calculate 30 days ago cutoff date
+	const thirtyDaysAgo = new Date();
+	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+	const cutoffDate = thirtyDaysAgo.toISOString();
+
+	console.log('[history/+page.server.ts] Loading transactions since:', cutoffDate);
+
 	// FIX #1: JOIN with loyalty_users to get loyalty_user.id
 	// telegram_user_id (123456789) → loyalty_user.id (1, 2, 3...)
+	// FIX #6: Changed from .limit(50) to date-based filtering (30 days)
 	const userTransactions = await db
 		.select({
 			id: transactions.id,
@@ -57,9 +65,13 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		})
 		.from(transactions)
 		.innerJoin(loyaltyUsers, eq(transactions.loyalty_user_id, loyaltyUsers.id))
-		.where(eq(loyaltyUsers.telegram_user_id, telegramUserId))
+		.where(
+			and(
+				eq(loyaltyUsers.telegram_user_id, telegramUserId),
+				gte(transactions.created_at, cutoffDate)
+			)
+		)
 		.orderBy(desc(transactions.created_at))
-		.limit(50)
 		.all();
 
 	console.log('[history/+page.server.ts] Found transactions:', userTransactions.length);

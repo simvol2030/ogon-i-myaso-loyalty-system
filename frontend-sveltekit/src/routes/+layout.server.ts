@@ -6,21 +6,63 @@ import type { LayoutServerLoad } from './$types';
 /**
  * Root layout data loader
  *
- * DATABASE VERSION:
+ * DATABASE VERSION (Phase 3 Update):
  * - Loads demo user as fallback (for testing in browser)
- * - Real user data fetched client-side via initializeUser() API
+ * - Loads REAL user stats (totalPurchases, totalSaved) from database if authenticated
  * - ProfileCard component merges Telegram SDK data instantly
  */
-export const load: LayoutServerLoad = () => {
-  // Demo user data for non-Telegram testing
-  const demoUser = {
-    id: 0, // Demo user ID
+export const load: LayoutServerLoad = async ({ cookies }) => {
+  // Get telegram_user_id from cookie (set by /api/telegram/init)
+  const telegramUserIdStr = cookies.get('telegram_user_id');
+
+  // Demo user data (fallback for non-authenticated users)
+  let user = {
+    id: 0,
     name: 'Демо Пользователь',
-    cardNumber: '000000', // 6 digits
-    balance: 500, // Default welcome bonus amount
+    cardNumber: '000000',
+    balance: 500,
     totalPurchases: 0,
     totalSaved: 0
   };
+
+  // Load real user stats if authenticated
+  let isDemoMode = true;
+  if (telegramUserIdStr) {
+    const telegramUserId = parseInt(telegramUserIdStr, 10);
+
+    if (!isNaN(telegramUserId) && telegramUserId > 0) {
+      const [loyaltyUser] = await db
+        .select({
+          id: loyaltyUsers.id,
+          first_name: loyaltyUsers.first_name,
+          last_name: loyaltyUsers.last_name,
+          card_number: loyaltyUsers.card_number,
+          current_balance: loyaltyUsers.current_balance,
+          total_purchases: loyaltyUsers.total_purchases,
+          total_saved: loyaltyUsers.total_saved
+        })
+        .from(loyaltyUsers)
+        .where(eq(loyaltyUsers.telegram_user_id, telegramUserId))
+        .limit(1);
+
+      if (loyaltyUser) {
+        user = {
+          id: loyaltyUser.id,
+          name: `${loyaltyUser.first_name} ${loyaltyUser.last_name || ''}`.trim(),
+          cardNumber: loyaltyUser.card_number || '000000',
+          balance: loyaltyUser.current_balance,
+          totalPurchases: loyaltyUser.total_purchases ?? 0,
+          totalSaved: loyaltyUser.total_saved ?? 0
+        };
+        isDemoMode = false;
+        console.log('[+layout.server.ts] Loaded real user stats:', {
+          telegram_user_id: telegramUserId,
+          totalPurchases: user.totalPurchases,
+          totalSaved: user.totalSaved
+        });
+      }
+    }
+  }
 
   // Loyalty rules (static config)
   const loyaltyRules = {
@@ -44,8 +86,8 @@ export const load: LayoutServerLoad = () => {
   };
 
   return {
-    user: demoUser,
+    user,
     loyaltyRules,
-    isDemoMode: true // Frontend will override with real Telegram data
+    isDemoMode
   };
 };

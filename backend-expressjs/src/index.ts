@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { initializeDatabase } from './db/database';
 import { securityHeaders } from './middleware/security';
+import { initScheduledJobs } from './jobs';
 
 // Импорт роутеров
 import authRouter from './routes/auth';
@@ -80,4 +81,7 @@ app.listen(PORT, '0.0.0.0', () => {
 	console.log(`\n✅ Server running on http://0.0.0.0:${PORT}`);
 	console.log(`✅ Accessible at http://localhost:${PORT} and http://127.0.0.1:${PORT}`);
 	console.log(`✅ API endpoints available at http://localhost:${PORT}/api\n`);
+
+	// Start cron jobs for scheduled tasks
+	initScheduledJobs();
 });
