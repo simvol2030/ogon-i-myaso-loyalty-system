@@ -244,12 +244,12 @@ export function validatePointsToRedeem(
 		return { valid: false, error: `Недостаточно баллов. Доступно: ${customerBalance}` };
 	}
 
-	// Check 50% discount limit (1 point = 1 ruble)
-	const maxDiscount = purchaseAmount * 0.5;
+	// Check 20% discount limit (1 point = 1 ruble)
+	const maxDiscount = purchaseAmount * 0.2;
 	if (points > maxDiscount) {
 		return {
 			valid: false,
-			error: `Скидка не может превышать 50% от покупки. Максимум: ${Math.floor(maxDiscount)} баллов`
+			error: `Скидка не может превышать 20% от покупки. Максимум: ${Math.floor(maxDiscount)} баллов`
 		};
 	}
 

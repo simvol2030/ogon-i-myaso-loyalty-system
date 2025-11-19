@@ -274,7 +274,9 @@ router.post('/', async (req: Request, res: Response) => {
 
 				// 4c. Create pending_discount for Agent
 				// 🔴 FIX: Foreign key ссылается на transactions.id (НЕ на cashier_transactions)
-				const expiresAt = new Date(Date.now() + 30000).toISOString();
+				// 🔴 FIX #3: Увеличен expiry timeout с 30s до 90s (для медленных систем)
+				const EXPIRY_SECONDS = parseInt(process.env.PENDING_DISCOUNT_EXPIRY_SECONDS || '90');
+				const expiresAt = new Date(Date.now() + EXPIRY_SECONDS * 1000).toISOString();
 				tx.insert(pendingDiscounts).values({
 					store_id: storeId,
 					transaction_id: spendTx.id, // ✅ Ссылка на transactions.id (spend record)

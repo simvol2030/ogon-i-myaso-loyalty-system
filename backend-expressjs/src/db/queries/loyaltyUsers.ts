@@ -39,34 +39,14 @@ export async function createLoyaltyUser(data: NewLoyaltyUser) {
 }
 
 /**
- * Обновить баланс пользователя (atomic operation)
- * @param id - User ID
- * @param delta - Amount to add/subtract (positive for earn, negative for spend)
- * @returns Updated user or null if not found
+ * ❌ REMOVED: updateLoyaltyUserBalance() - had race condition vulnerability
+ * Use atomic SQL updates directly in transactions instead:
+ *
+ * Example:
+ * await db.update(loyaltyUsers)
+ *   .set({ current_balance: sql`current_balance + ${delta}` })
+ *   .where(eq(loyaltyUsers.id, id));
  */
-export async function updateLoyaltyUserBalance(id: number, delta: number) {
-	// Get current balance first
-	const user = await getLoyaltyUserById(id);
-	if (!user) return null;
-
-	const newBalance = user.current_balance + delta;
-
-	// Ensure balance doesn't go negative
-	if (newBalance < 0) {
-		throw new Error('Недостаточно баллов для списания');
-	}
-
-	const result = await db
-		.update(loyaltyUsers)
-		.set({
-			current_balance: newBalance,
-			last_activity: new Date().toISOString()
-		})
-		.where(eq(loyaltyUsers.id, id))
-		.returning();
-
-	return result[0] || null;
-}
 
 /**
  * Обновить статистику покупок пользователя

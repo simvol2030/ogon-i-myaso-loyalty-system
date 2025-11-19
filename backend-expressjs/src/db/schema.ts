@@ -52,7 +52,7 @@ export const loyaltyUsers = sqliteTable('loyalty_users', {
 	last_name: text('last_name'),
 	username: text('username'),
 	language_code: text('language_code'),
-	current_balance: real('current_balance').notNull().default(500.0),
+	current_balance: real('current_balance').notNull().default(500.0), // CHECK: balance >= 0 (enforced via migration 0002)
 	total_purchases: integer('total_purchases').notNull().default(0),
 	total_saved: real('total_saved').notNull().default(0),
 	store_id: integer('store_id'),

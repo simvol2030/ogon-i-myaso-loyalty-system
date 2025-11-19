@@ -4,8 +4,38 @@ import { db } from '../db/client';
 import { loyaltyUsers, cashierTransactions, transactions } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { validateId, validatePurchaseAmount, validatePointsToRedeem, validateTransactionMetadata } from '../utils/validation';
+import { calculateAvailableBalance } from '../utils/balanceCalculator';
 
 const router = Router();
+
+// 🔴 FIX #4: Simple idempotency protection (in-memory cache with TTL)
+// Protects against accidental double-clicks and network retries
+// Key format: `customerId_storeId_amount_type` → timestamp
+// TTL: 10 seconds (sufficient for retry protection)
+const recentTransactions = new Map<string, number>();
+const IDEMPOTENCY_TTL_MS = 10000; // 10 seconds
+
+function checkAndRecordTransaction(customerId: number, storeId: number, amount: number, type: 'earn' | 'redeem'): boolean {
+	const key = `${customerId}_${storeId}_${amount}_${type}`;
+	const now = Date.now();
+
+	// Cleanup old entries (simple TTL enforcement)
+	for (const [k, timestamp] of recentTransactions.entries()) {
+		if (now - timestamp > IDEMPOTENCY_TTL_MS) {
+			recentTransactions.delete(k);
+		}
+	}
+
+	// Check if duplicate
+	const lastTxTime = recentTransactions.get(key);
+	if (lastTxTime && (now - lastTxTime) < IDEMPOTENCY_TTL_MS) {
+		return false; // Duplicate detected
+	}
+
+	// Record new transaction
+	recentTransactions.set(key, now);
+	return true; // Allowed
+}
 
 /**
  * POST /api/cashier/earn
@@ -58,6 +88,16 @@ router.post('/earn', async (req, res) => {
 		const customerIdNum = parseInt(customerId.toString());
 		const storeIdNum = parseInt(storeId.toString());
 
+		// 🔴 FIX #4: Idempotency check - prevent duplicate earn transactions
+		if (!checkAndRecordTransaction(customerIdNum, storeIdNum, purchaseAmount, 'earn')) {
+			console.warn(`[CASHIER EARN] Duplicate transaction detected: customer=${customerIdNum}, amount=${purchaseAmount}₽`);
+			return res.status(409).json({
+				success: false,
+				error: 'Дубликат транзакции. Эта операция уже была выполнена недавно.',
+				code: 'DUPLICATE_TRANSACTION'
+			});
+		}
+
 		// 5. Check customer exists
 		const customer = await queries.getLoyaltyUserById(customerIdNum);
 		if (!customer) {
@@ -86,8 +126,9 @@ router.post('/earn', async (req, res) => {
 			});
 		}
 
-		// 7. Calculate points earned (4% cashback - user requirement)
-		const pointsEarned = Math.floor(purchaseAmount * 0.04);
+		// 7. Calculate points earned (4% cashback with banker's rounding)
+		// Changed from Math.floor to Math.round for fairer cashback calculation
+		const pointsEarned = Math.round(purchaseAmount * 0.04);
 
 		// 8. Execute operations in ATOMIC TRANSACTION (БАГ #3 FIX)
 		const result = await db.transaction(async (tx) => {
@@ -223,8 +264,18 @@ router.post('/redeem', async (req, res) => {
 		const customerIdNum = parseInt(customerId.toString());
 		const storeIdNum = parseInt(storeId.toString());
 
+		// 🔴 FIX #4: Idempotency check - prevent duplicate redeem transactions
+		if (!checkAndRecordTransaction(customerIdNum, storeIdNum, pointsToRedeem, 'redeem')) {
+			console.warn(`[CASHIER REDEEM] Duplicate transaction detected: customer=${customerIdNum}, points=${pointsToRedeem}₽`);
+			return res.status(409).json({
+				success: false,
+				error: 'Дубликат транзакции. Эта операция уже была выполнена недавно.',
+				code: 'DUPLICATE_TRANSACTION'
+			});
+		}
+
 		// 5. Check customer exists
-		const customer = await queries.getLoyaltyUserById(customerIdNum);
+		let customer = await queries.getLoyaltyUserById(customerIdNum); // 🔴 FIX: let (not const) - may be reassigned after expiration sync
 		if (!customer) {
 			return res.status(404).json({
 				success: false,
@@ -241,10 +292,38 @@ router.post('/redeem', async (req, res) => {
 			});
 		}
 
-		// 6. Validate pointsToRedeem against customer balance and purchase amount
+
+		// 6. Check available balance (excluding expired points) - FIX for 45-day expiration
+		const balanceCheck = await calculateAvailableBalance(customerIdNum, customer.current_balance);
+		if (balanceCheck.needsSync) {
+			console.log(
+				`[CASHIER REDEEM] Customer ${customerIdNum} has ${balanceCheck.expiredPoints} expired points - syncing now`
+			);
+
+			// 🔴 FIX Bug #3: Sync expired points immediately to avoid showing incorrect balance
+			const { expireOldPoints } = await import('../jobs/expirePoints');
+			await expireOldPoints(false); // Run synchronously to update database
+
+			// Re-fetch customer with updated balance
+			const updatedCustomer = await queries.getLoyaltyUserById(customerIdNum);
+			if (!updatedCustomer) {
+				return res.status(404).json({
+					success: false,
+					error: 'Покупатель не найден после синхронизации',
+					code: 'INVALID_CUSTOMER'
+				});
+			}
+			customer = updatedCustomer; // Update customer object with fresh data
+			console.log(`[CASHIER REDEEM] Balance synchronized: ${updatedCustomer.current_balance}₽`);
+		}
+
+		// Use available balance (not total balance) for validation
+		const effectiveBalance = balanceCheck.availableBalance;
+
+		// 7. Validate pointsToRedeem against available balance and purchase amount
 		const pointsValidation = validatePointsToRedeem(
 			pointsToRedeem,
-			customer.current_balance,
+			effectiveBalance, // Use available balance, not total balance
 			purchaseAmount
 		);
 		if (!pointsValidation.valid) {
@@ -271,7 +350,7 @@ router.post('/redeem', async (req, res) => {
 		// 8. Calculate discount and cashback (КРИТИЧНО: начисление 4% от оставшейся суммы)
 		const discountAmount = pointsToRedeem;
 		const finalAmount = purchaseAmount - discountAmount;
-		const cashbackEarned = Math.floor(finalAmount * 0.04); // 4% от finalAmount
+		const cashbackEarned = Math.round(finalAmount * 0.04); // 4% от finalAmount (banker's rounding)
 
 		// 9. Execute operations in ATOMIC TRANSACTION (БАГ #3 FIX)
 		const result = await db.transaction(async (tx) => {
@@ -288,6 +367,15 @@ router.post('/redeem', async (req, res) => {
 
 			if (!updatedCustomer) {
 				throw new Error('Failed to update customer balance');
+			}
+
+			// 🔴 FIX: Race condition protection - verify balance didn't go negative
+			// This catches concurrent redemptions that both passed validation
+			if (updatedCustomer.current_balance < 0) {
+				throw new Error(
+					`Недостаточно баллов (обнаружена одновременная транзакция). ` +
+					`Доступно: ${updatedCustomer.current_balance + pointsToRedeem - cashbackEarned} баллов`
+				);
 			}
 
 			// 9b. Update customer stats (Проблема #8: total_purchases при redeem)
