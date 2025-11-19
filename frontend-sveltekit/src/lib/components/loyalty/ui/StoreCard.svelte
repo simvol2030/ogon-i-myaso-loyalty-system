@@ -21,8 +21,7 @@
     <div class="list-item-text">
       <h3>{store.name}</h3>
       <p>{store.address}</p>
-      <div class="list-item-meta" class:red={store.closed}>{store.status}</div>
-      <div class="distance">{store.distance}</div>
+      <div class="list-item-meta">{store.hours}</div>
     </div>
   </div>
 </button>
@@ -111,15 +110,5 @@
     font-weight: bold;
     font-size: 13px;
     margin-top: 6px;
-  }
-
-  .list-item-meta.red {
-    color: var(--accent-red);
-  }
-
-  .distance {
-    color: #6b7280;
-    font-size: 12px;
-    margin-top: 4px;
   }
 </style>

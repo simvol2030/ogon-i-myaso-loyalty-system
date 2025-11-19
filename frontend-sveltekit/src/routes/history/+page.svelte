@@ -72,7 +72,7 @@
   .history-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
   }
 
   /* Example transactions styling */

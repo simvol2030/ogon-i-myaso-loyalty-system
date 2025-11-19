@@ -17,7 +17,7 @@
     </div>
     <div class="history-right">
       <div class="history-amount" class:green={transaction.type === 'earn'} class:red={transaction.type === 'spend'}>
-        {transaction.amount > 0 ? '+' : ''}{transaction.amount} Мурзи-коинов
+        {transaction.type === 'earn' ? '+' : '-'}{transaction.amount} Мурзи-коинов
       </div>
       <div class="history-spent">{transaction.spent}</div>
     </div>
@@ -28,10 +28,10 @@
   .history-item {
     background: var(--card-bg);
     border-radius: 20px;
-    padding: 20px;
+    padding: 10px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border-color);
-    margin-bottom: 12px;
+    margin-bottom: 6px;
   }
 
   .history-content {

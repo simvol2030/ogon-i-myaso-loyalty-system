@@ -81,16 +81,6 @@
           <span>{store.hours}</span>
         </div>
 
-        <div class="info-item">
-          <strong>Статус:</strong>
-          <span class:red={store.closed} class:green={!store.closed}>{store.status}</span>
-        </div>
-
-        <div class="info-item">
-          <strong>Расстояние:</strong>
-          <span>{store.distance}</span>
-        </div>
-
         <div class="features">
           <strong>Услуги:</strong>
           <div class="features-list">
@@ -222,14 +212,6 @@
 
   .info-item a:hover {
     text-decoration: underline;
-  }
-
-  .red {
-    color: var(--accent-red) !important;
-  }
-
-  .green {
-    color: var(--secondary-green) !important;
   }
 
   .features {

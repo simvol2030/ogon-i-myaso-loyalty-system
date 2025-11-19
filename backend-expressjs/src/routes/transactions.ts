@@ -185,6 +185,15 @@ router.post('/', async (req: Request, res: Response) => {
 			where: eq(stores.id, storeId)
 		});
 
+		// 🔴 FIX: Validate store exists
+		if (!store || !storeId) {
+			return res.status(404).json({
+				error: 'Store not found',
+				storeId: storeId,
+				message: 'Invalid store ID. Transaction cannot be created.'
+			});
+		}
+
 		// Определяем тип операции
 		const isRedeem = pointsToRedeem > 0;
 		const discountAmount = pointsToRedeem;
@@ -234,7 +243,7 @@ router.post('/', async (req: Request, res: Response) => {
 			// 4. Create transactions record(s)
 			if (isRedeem) {
 				// 4a. Spend record (списание баллов)
-				tx.insert(transactions).values({
+				const spendTx = tx.insert(transactions).values({
 					loyalty_user_id: customer.id,
 					store_id: storeId,
 					title: 'Списание за покупку',
@@ -245,7 +254,7 @@ router.post('/', async (req: Request, res: Response) => {
 					cashback_earned: 0,
 					spent: `${discountAmount} ₽`,
 					store_name: store?.name || null
-				}).run();
+				}).returning().get();
 
 				// 4b. Earn record (кешбэк от оплаченной суммы)
 				if (cashbackAmount > 0) {
@@ -264,11 +273,11 @@ router.post('/', async (req: Request, res: Response) => {
 				}
 
 				// 4c. Create pending_discount for Agent
-				// 🔴 FIX: В production БД pending_discounts.transaction_id ссылается на cashier_transactions.id
+				// 🔴 FIX: Foreign key ссылается на transactions.id (НЕ на cashier_transactions)
 				const expiresAt = new Date(Date.now() + 30000).toISOString();
 				tx.insert(pendingDiscounts).values({
 					store_id: storeId,
-					transaction_id: cashierTx.id, // Ссылка на cashier_transactions.id (как в production)
+					transaction_id: spendTx.id, // ✅ Ссылка на transactions.id (spend record)
 					discount_amount: pointsToRedeem,
 					status: 'pending',
 					expires_at: expiresAt

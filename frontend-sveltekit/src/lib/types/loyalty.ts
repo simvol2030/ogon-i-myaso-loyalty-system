@@ -19,8 +19,6 @@ export interface Store {
   id: number;
   name: string;
   address: string;
-  status: string;
-  distance: string;
   iconColor: string;
   phone: string;
   hours: string;
