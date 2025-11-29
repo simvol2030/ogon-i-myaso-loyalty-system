@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { validateCredentials, createSession, getSession } from '$lib/server/auth/session';
-import { validateEmail, validatePassword } from '$lib/server/validation';
+import { validateEmail } from '$lib/server/validation';
 import { checkRateLimit, resetRateLimit, getClientIP, RATE_LIMIT_CONFIGS } from '$lib/server/rate-limit';
 
 // Если уже залогинены, редирект на dashboard
@@ -30,11 +30,10 @@ export const actions: Actions = {
 			});
 		}
 
-		// Validate password strength
-		const passwordValidation = validatePassword(password);
-		if (!passwordValidation.valid) {
+		// Basic password presence check (no complexity validation for login)
+		if (!password || typeof password !== 'string') {
 			return fail(400, {
-				error: passwordValidation.error,
+				error: 'Password is required',
 				email
 			});
 		}
