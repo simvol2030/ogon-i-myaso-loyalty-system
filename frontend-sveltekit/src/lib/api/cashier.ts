@@ -10,8 +10,11 @@ import { parseQRData } from '$lib/utils/qr-generator';
 const USE_MOCKS = false; // ✅ ВСЕГДА REAL API
 
 // ===== Backend URL для server-side И client-side fetch =====
-// Environment variable accessed at runtime via import.meta.env
-const BACKEND_URL = import.meta.env.PUBLIC_BACKEND_URL || 'http://localhost:3000';
+// Client-side: use relative URLs (proxied by SvelteKit server endpoints)
+// Server-side: use environment variable
+const BACKEND_URL = typeof window === 'undefined'
+	? (import.meta.env.PUBLIC_BACKEND_URL || 'http://localhost:3015')
+	: ''; // Empty string means relative URLs for browser
 
 // ===== Хранилище транзакций (для моков) =====
 const mockTransactions: Transaction[] = [];
