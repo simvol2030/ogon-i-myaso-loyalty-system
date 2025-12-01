@@ -130,7 +130,6 @@ router.post('/', requireRole('super-admin', 'editor'), async (req, res) => {
 				coords_lat: coordinates.lat,
 				coords_lng: coordinates.lng,
 				status: 'open',
-				distance: '0 км',
 				closed: false,
 				is_active: isActive
 			})
