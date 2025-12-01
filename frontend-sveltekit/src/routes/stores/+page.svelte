@@ -1,11 +1,7 @@
 <script lang="ts">
 	import ImageSlider from '$lib/components/ImageSlider.svelte';
-	import { API_BASE_URL } from '$lib/config';
 
 	let { data } = $props();
-
-	// Base URL for images (backend URL without /api)
-	const imageBaseUrl = API_BASE_URL.replace('/api', '');
 
 	// Safe JSON parse for features field
 	function parseFeatures(features: string | string[]): string[] {
@@ -36,7 +32,7 @@
 			<article class="store-card" class:closed={store.closed}>
 				<!-- Image Slider -->
 				{#if store.images && store.images.length > 0}
-					<ImageSlider images={store.images} baseUrl={imageBaseUrl} />
+					<ImageSlider images={store.images} />
 				{/if}
 
 				<div class="store-content">
