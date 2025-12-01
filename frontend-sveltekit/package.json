@@ -17,8 +17,7 @@
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"deploy:check": "node ../scripts/check-env.js",
-		"deploy:build": "PUBLIC_BACKEND_URL=https://murzicoin.murzico.ru NODE_ENV=production npm run build",
-		"deploy:full": "bash ../deploy.sh"
+		"deploy:build": "PUBLIC_BACKEND_URL=https://murzicoin.murzico.ru NODE_ENV=production npm run build"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
