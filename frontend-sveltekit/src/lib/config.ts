@@ -1,15 +1,17 @@
 /**
  * App Configuration
+ * Uses SvelteKit $env/static/public for proper build-time injection
  */
 
-export const API_BASE_URL =
-	import.meta.env.VITE_API_BASE_URL ||
-	(import.meta.env.MODE === 'production'
-		? 'https://murzicoin.murzico.ru/api'
-		: 'http://localhost:3015/api');
+import { PUBLIC_BACKEND_URL } from '$env/static/public';
+
+// Client-side should use relative URLs, server-side uses full URL
+export const API_BASE_URL = typeof window === 'undefined'
+	? (PUBLIC_BACKEND_URL || 'http://localhost:3015') + '/api'
+	: '/api'; // Relative URL for client
 
 export const config = {
 	apiBaseUrl: API_BASE_URL,
-	useMockData: import.meta.env.VITE_USE_MOCK === 'true',
-	environment: import.meta.env.MODE
+	useMockData: false, // No longer using import.meta.env
+	environment: typeof window === 'undefined' ? 'server' : 'client'
 };

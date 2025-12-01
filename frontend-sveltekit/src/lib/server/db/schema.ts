@@ -130,7 +130,6 @@ export const stores = sqliteTable('stores', {
 	coords_lat: real('coords_lat').notNull(),
 	coords_lng: real('coords_lng').notNull(),
 	status: text('status').notNull(),
-	distance: text('distance').notNull(),
 	closed: integer('closed', { mode: 'boolean' }).notNull().default(false),
 	is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true)
 });
