@@ -5,15 +5,16 @@
 
 import { MOCK_STORES, MOCK_CUSTOMERS, type Store, type Customer, type Transaction } from '$lib/data/cashier-mocks';
 import { parseQRData } from '$lib/utils/qr-generator';
+import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 // ===== Режим работы (true = моки, false = реальный API) =====
 const USE_MOCKS = false; // ✅ ВСЕГДА REAL API
 
 // ===== Backend URL для server-side И client-side fetch =====
-// Client-side: use relative URLs (proxied by SvelteKit server endpoints)
-// Server-side: use environment variable
+// Client-side: ALWAYS use relative URLs (empty string)
+// Server-side: use PUBLIC_BACKEND_URL from env
 const BACKEND_URL = typeof window === 'undefined'
-	? (import.meta.env.PUBLIC_BACKEND_URL || 'http://localhost:3015')
+	? (PUBLIC_BACKEND_URL || 'http://localhost:3015')
 	: ''; // Empty string means relative URLs for browser
 
 // ===== Хранилище транзакций (для моков) =====
