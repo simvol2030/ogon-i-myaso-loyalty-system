@@ -13,7 +13,7 @@ const BACKEND_URL = 'http://localhost:3015';
  * Query params:
  * - storeId: ID магазина (обязательно)
  */
-export const GET: RequestHandler = async ({ url, fetch }) => {
+export const GET: RequestHandler = async ({ url, fetch, request }) => {
 	const storeIdParam = url.searchParams.get('storeId');
 
 	if (!storeIdParam) {
@@ -30,7 +30,11 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 		const backendUrl = `${BACKEND_URL}/api/1c/pending-discounts?storeId=${storeId}`;
 		console.log('[API Proxy] Proxying pending-discounts to:', backendUrl);
 
-		const response = await fetch(backendUrl);
+		// 🔴 FIX: Forward X-Store-API-Key header to backend
+		const apiKey = request.headers.get('x-store-api-key');
+		const response = await fetch(backendUrl, {
+			headers: apiKey ? { 'X-Store-API-Key': apiKey } : {}
+		});
 
 		if (!response.ok) {
 			const errorData = await response.json();
