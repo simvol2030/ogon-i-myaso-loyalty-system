@@ -1,11 +1,13 @@
 <script lang="ts">
   import { theme, toggleTheme } from '$lib/stores/loyalty';
+  import CartIcon from '$lib/components/loyalty/ui/CartIcon.svelte';
 
   interface Props {
     onMenuClick: () => void;
+    onCartClick?: () => void;
   }
 
-  let { onMenuClick }: Props = $props();
+  let { onMenuClick, onCartClick }: Props = $props();
 </script>
 
 <header class="app-header">
@@ -22,6 +24,8 @@
     <button class="theme-toggle" onclick={toggleTheme} aria-label="Переключить тему">
       <span class="theme-icon">{$theme === 'light' ? '🌙' : '☀️'}</span>
     </button>
+
+    <CartIcon onClick={onCartClick} />
 
     <button class="hamburger-button" onclick={onMenuClick} aria-label="Открыть меню">
       <svg class="hamburger-icon" fill="currentColor" viewBox="0 0 24 24">
