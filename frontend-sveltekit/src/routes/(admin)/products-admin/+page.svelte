@@ -2,7 +2,7 @@
 	import type { PageData } from './$types';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { Input, Select, Button, Badge, Card } from '$lib/components/ui';
-	import type { Product, ProductCategory } from '$lib/types/admin';
+	import type { Product, ProductCategory, Category } from '$lib/types/admin';
 	import { productsAPI } from '$lib/api/admin/products';
 	import ProductFormModal from '$lib/components/admin/products/ProductFormModal.svelte';
 
@@ -56,10 +56,20 @@
 		}
 	};
 
-	const categoryOptions = $derived(() => [
-		{ value: 'all', label: 'Все категории' },
-		...data.categories.map((c: ProductCategory) => ({ value: c.name, label: `${c.name} (${c.count})` }))
-	]);
+	const categoryOptions = $derived(() => {
+		// Use new categories from table if available, otherwise fallback to legacy
+		const categoriesNew = data.categoriesNew as Category[];
+		if (categoriesNew && categoriesNew.length > 0) {
+			return [
+				{ value: 'all', label: 'Все категории' },
+				...categoriesNew.map((c) => ({ value: c.name, label: `${c.name} (${c.productCount || 0})` }))
+			];
+		}
+		return [
+			{ value: 'all', label: 'Все категории' },
+			...data.categories.map((c: ProductCategory) => ({ value: c.name, label: `${c.name} (${c.count})` }))
+		];
+	});
 
 	const formatCurrency = (num: number) =>
 		num.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB' });
@@ -158,6 +168,7 @@
 	isOpen={formModalOpen}
 	editingProduct={editingProduct}
 	categories={data.categories.map((c: ProductCategory) => c.name)}
+	categoriesNew={data.categoriesNew as Category[]}
 	onClose={() => (formModalOpen = false)}
 	onSuccess={() => {
 		formModalOpen = false;

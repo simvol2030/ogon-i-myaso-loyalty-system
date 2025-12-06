@@ -222,38 +222,43 @@ export interface CategoriesListParams {
 // ============================================
 
 /**
- * Product - товар каталога (Sprint 3 Extended)
+ * Product - товар каталога (Sprint 3 Extended + Shop Extension)
  */
 export interface Product {
 	id: number;
 	name: string;
-	description: string | null; // Sprint 3 NEW
+	description: string | null;
 	price: number;
 	oldPrice: number | null;
-	quantityInfo: string | null; // Sprint 3 NEW (количество/упаковка)
+	quantityInfo: string | null; // количество/упаковка
 	image: string;
-	category: string;
+	category: string; // Legacy text category
+	categoryId: number | null; // Shop extension: FK to categories table
+	sku: string | null; // Shop extension: артикул товара
+	position: number; // Shop extension: позиция для сортировки
 	isActive: boolean;
-	showOnHome: boolean; // Sprint 3 NEW (топовые товары)
-	isRecommendation: boolean; // Sprint 3 NEW (рекомендации без цены)
+	showOnHome: boolean; // топовые товары
+	isRecommendation: boolean; // рекомендации без цены
 	createdAt?: string;
 	updatedAt?: string;
 }
 
 /**
- * ProductFormData - форма создания/редактирования товара (Sprint 3 Extended)
+ * ProductFormData - форма создания/редактирования товара (Sprint 3 Extended + Shop Extension)
  */
 export interface ProductFormData {
 	name: string;
-	description: string | undefined; // Sprint 3 NEW
+	description: string | undefined;
 	price: number;
 	oldPrice: number | undefined;
-	quantityInfo: string | undefined; // Sprint 3 NEW (количество/упаковка)
+	quantityInfo: string | undefined; // количество/упаковка
 	image: string;
-	category: string;
+	category: string; // Legacy text category
+	categoryId: number | null; // Shop extension: FK to categories table
+	sku: string | undefined; // Shop extension: артикул товара
 	isActive: boolean;
-	showOnHome: boolean; // Sprint 3 NEW
-	isRecommendation: boolean; // Sprint 3 NEW
+	showOnHome: boolean;
+	isRecommendation: boolean;
 }
 
 /**

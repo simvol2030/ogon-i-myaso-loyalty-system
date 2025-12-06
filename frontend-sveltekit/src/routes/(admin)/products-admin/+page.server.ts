@@ -20,29 +20,35 @@ export const load: PageServerLoad = async ({ url, fetch, cookies }) => {
 		throw new Error('Session expired. Please login again.');
 	}
 
-	// Fetch products, forwarding session cookie
+	const headers = { Cookie: `session=${sessionCookie}` };
+
+	// Fetch products, categories (new) and legacy categories in parallel
 	const productsQuery = buildQuery({ search, status, category, page, limit: 20 });
-	const productsResponse = await fetch(`${API_BASE_URL}/admin/products?${productsQuery}`, {
-		headers: {
-			Cookie: `session=${sessionCookie}`
-		}
-	});
+	const [productsResponse, categoriesNewResponse, legacyCategoriesResponse] = await Promise.all([
+		fetch(`${API_BASE_URL}/admin/products?${productsQuery}`, { headers }),
+		fetch(`${API_BASE_URL}/admin/categories`, { headers }),
+		fetch(`${API_BASE_URL}/admin/products/categories`, { headers })
+	]);
+
 	const productsJson = await productsResponse.json();
+	const categoriesNewJson = await categoriesNewResponse.json();
+	const legacyCategoriesJson = await legacyCategoriesResponse.json();
 
 	if (!productsJson.success) {
 		throw new Error(productsJson.error || 'Failed to load products');
 	}
 
-	// Fetch categories, forwarding session cookie
-	const categoriesResponse = await fetch(`${API_BASE_URL}/admin/products/categories`, {
-		headers: {
-			Cookie: `session=${sessionCookie}`
-		}
-	});
-	const categoriesJson = await categoriesResponse.json();
-
 	const { products, pagination } = productsJson.data;
-	const categories = categoriesJson.data?.categories || [];
+	// New categories from categories table
+	const categoriesNew = categoriesNewJson.data?.categories || [];
+	// Legacy text categories from products.category field
+	const legacyCategories = legacyCategoriesJson.data?.legacyCategories || [];
 
-	return { products, pagination, categories, filters: { search, status, category } };
+	return {
+		products,
+		pagination,
+		categories: legacyCategories, // Legacy format for backwards compatibility
+		categoriesNew, // New categories from table
+		filters: { search, status, category }
+	};
 };

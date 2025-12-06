@@ -1,17 +1,18 @@
 <script lang="ts">
-	import type { Product, ProductFormData } from '$lib/types/admin';
+	import type { Product, ProductFormData, Category } from '$lib/types/admin';
 	import { Modal, Button, Input, Textarea, Select } from '$lib/components/ui';
 	import { productsAPI } from '$lib/api/admin/products';
 
 	interface Props {
 		isOpen: boolean;
 		editingProduct?: Product | null;
-		categories: string[];
+		categories: string[]; // Legacy text categories
+		categoriesNew?: Category[]; // New categories from table
 		onClose: () => void;
 		onSuccess?: () => void;
 	}
 
-	let { isOpen, editingProduct = null, categories, onClose, onSuccess }: Props = $props();
+	let { isOpen, editingProduct = null, categories, categoriesNew = [], onClose, onSuccess }: Props = $props();
 
 	let formData = $state<ProductFormData>({
 		name: '',
@@ -21,6 +22,8 @@
 		quantityInfo: undefined,
 		image: '',
 		category: categories[0] || '',
+		categoryId: null,
+		sku: undefined,
 		isActive: true,
 		showOnHome: false,
 		isRecommendation: false
@@ -53,6 +56,8 @@
 				quantityInfo: editingProduct.quantityInfo ?? undefined,
 				image: editingProduct.image,
 				category: editingProduct.category,
+				categoryId: editingProduct.categoryId ?? null,
+				sku: editingProduct.sku ?? undefined,
 				isActive: editingProduct.isActive,
 				showOnHome: editingProduct.showOnHome,
 				isRecommendation: editingProduct.isRecommendation
@@ -67,6 +72,8 @@
 				quantityInfo: undefined,
 				image: '',
 				category: categories[0] || '',
+				categoryId: null,
+				sku: undefined,
 				isActive: true,
 				showOnHome: false,
 				isRecommendation: false
@@ -80,9 +87,29 @@
 		if (formData.price <= 0) return false;
 		// FIX #2: Image is optional - can be empty or valid URL
 		if (formData.image && formData.image.length > 0 && formData.image.length < 3) return false;
-		if (!formData.category) return false;
+		// Either legacy category or new categoryId must be set
+		if (!formData.category && !formData.categoryId) return false;
 		return true;
 	});
+
+	// Category options from new categories table
+	const categoryOptions = $derived(() => {
+		return [
+			{ value: '', label: 'Без категории' },
+			...categoriesNew.map(c => ({ value: String(c.id), label: c.name }))
+		];
+	});
+
+	const handleCategoryChange = (value: string) => {
+		formData.categoryId = value ? parseInt(value) : null;
+		// Auto-set legacy category from selected category name
+		if (value) {
+			const selectedCategory = categoriesNew.find(c => c.id === parseInt(value));
+			if (selectedCategory) {
+				formData.category = selectedCategory.name;
+			}
+		}
+	};
 
 	const handleImageUrlChange = (value: string) => {
 		formData.image = value;
@@ -236,7 +263,20 @@
 			</div>
 		</div>
 
-		<Select label="Категория" bind:value={formData.category} options={categories.map(c => ({ value: c, label: c }))} />
+		<!-- Категория и SKU -->
+		<div class="form-row">
+			{#if categoriesNew.length > 0}
+				<Select
+					label="Категория"
+					value={formData.categoryId ? String(formData.categoryId) : ''}
+					options={categoryOptions()}
+					onChange={handleCategoryChange}
+				/>
+			{:else}
+				<Select label="Категория" bind:value={formData.category} options={categories.map(c => ({ value: c, label: c }))} />
+			{/if}
+			<Input label="Артикул (SKU)" bind:value={formData.sku} placeholder="ABC-12345" maxLength={50} />
+		</div>
 
 		<div class="checkboxes-section">
 			<div class="checkbox-row">
