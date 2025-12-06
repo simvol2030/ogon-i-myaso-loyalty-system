@@ -10,7 +10,7 @@
 
 import { db } from '../db/client';
 import { pendingDiscounts, activeChecks } from '../db/schema';
-import { lt, or, and, eq } from 'drizzle-orm';
+import { lt, and, eq } from 'drizzle-orm';
 
 interface CleanupResult {
 	expiredDeleted: number;

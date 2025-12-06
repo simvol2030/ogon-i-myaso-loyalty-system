@@ -11,8 +11,8 @@
 
 import { Router, Request, Response } from 'express';
 import { db } from '../db/client';
-import { cashierTransactions, loyaltyUsers, pendingDiscounts, activeChecks } from '../db/schema';
-import { eq, and, desc, sql, inArray, lt } from 'drizzle-orm';
+import { pendingDiscounts, activeChecks } from '../db/schema';
+import { eq, and, sql, inArray, lt } from 'drizzle-orm';
 
 const router = Router();
 
