@@ -60,11 +60,13 @@ export const loyaltyUsers = sqliteTable('loyalty_users', {
 	registration_date: text('registration_date').notNull().default(sql`CURRENT_TIMESTAMP`),
 	last_activity: text('last_activity').default(sql`CURRENT_TIMESTAMP`),
 	chat_id: integer('chat_id').notNull(),
-	is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true)
+	is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+	birthday: text('birthday') // Format: MM-DD (e.g., "12-25" for December 25)
 }, (table) => ({
 	// Sprint 5 Audit Cycle 1 Fix: Индексы для dashboard queries
 	registrationIdx: index('idx_loyalty_users_registration').on(table.registration_date),
-	storeIdIdx: index('idx_loyalty_users_store_id').on(table.store_id)
+	storeIdIdx: index('idx_loyalty_users_store_id').on(table.store_id),
+	birthdayIdx: index('idx_loyalty_users_birthday').on(table.birthday)
 }));
 
 /**
@@ -279,6 +281,143 @@ export const pendingDiscounts = sqliteTable('pending_discounts', {
 	expiresIdx: index('idx_pending_expires').on(table.expires_at)
 }));
 
+/**
+ * Campaigns table - рассылки и кампании
+ */
+export const campaigns = sqliteTable('campaigns', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+
+	// Basic info
+	title: text('title').notNull(),
+	message_text: text('message_text').notNull(),
+	message_image: text('message_image'),
+	button_text: text('button_text'),
+	button_url: text('button_url'),
+
+	// Link to offer
+	offer_id: integer('offer_id').references(() => offers.id, { onDelete: 'set null' }),
+
+	// Targeting
+	target_type: text('target_type', { enum: ['all', 'segment'] }).notNull().default('all'),
+	target_filters: text('target_filters'), // JSON
+
+	// Trigger
+	trigger_type: text('trigger_type', { enum: ['manual', 'scheduled', 'event'] }).notNull().default('manual'),
+	trigger_config: text('trigger_config'), // JSON
+
+	// Status
+	status: text('status', { enum: ['draft', 'scheduled', 'sending', 'completed', 'cancelled'] }).notNull().default('draft'),
+	scheduled_at: text('scheduled_at'),
+	started_at: text('started_at'),
+	completed_at: text('completed_at'),
+
+	// Statistics
+	total_recipients: integer('total_recipients').notNull().default(0),
+	sent_count: integer('sent_count').notNull().default(0),
+	delivered_count: integer('delivered_count').notNull().default(0),
+	failed_count: integer('failed_count').notNull().default(0),
+
+	// Audit
+	created_by: integer('created_by').references(() => admins.id, { onDelete: 'set null' }),
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+	updated_at: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+	statusIdx: index('idx_campaigns_status').on(table.status),
+	scheduledIdx: index('idx_campaigns_scheduled').on(table.status, table.scheduled_at),
+	createdIdx: index('idx_campaigns_created').on(table.created_at)
+}));
+
+/**
+ * Campaign Recipients table - получатели рассылки
+ */
+export const campaignRecipients = sqliteTable('campaign_recipients', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	campaign_id: integer('campaign_id')
+		.notNull()
+		.references(() => campaigns.id, { onDelete: 'cascade' }),
+	loyalty_user_id: integer('loyalty_user_id')
+		.notNull()
+		.references(() => loyaltyUsers.id, { onDelete: 'cascade' }),
+	status: text('status', { enum: ['pending', 'sent', 'delivered', 'failed'] }).notNull().default('pending'),
+	sent_at: text('sent_at'),
+	error_message: text('error_message')
+}, (table) => ({
+	campaignIdx: index('idx_campaign_recipients_campaign').on(table.campaign_id),
+	statusIdx: index('idx_campaign_recipients_status').on(table.campaign_id, table.status),
+	userIdx: index('idx_campaign_recipients_user').on(table.loyalty_user_id)
+}));
+
+/**
+ * Trigger Templates table - шаблоны триггеров
+ */
+export const triggerTemplates = sqliteTable('trigger_templates', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+
+	// Basic info
+	name: text('name').notNull(),
+	description: text('description'),
+
+	// Event configuration
+	event_type: text('event_type', {
+		enum: [
+			'manual', 'scheduled', 'recurring',
+			'offer_created', 'inactive_days', 'balance_reached', 'balance_low',
+			'birthday', 'registration_anniversary', 'first_purchase', 'purchase_milestone'
+		]
+	}).notNull(),
+	event_config: text('event_config'), // JSON
+
+	// Message template
+	message_template: text('message_template').notNull(),
+	image_url: text('image_url'),
+	button_text: text('button_text'),
+	button_url: text('button_url'),
+
+	// State
+	is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+	auto_send: integer('auto_send', { mode: 'boolean' }).notNull().default(false),
+
+	// Timestamps
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+	updated_at: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+	activeIdx: index('idx_triggers_active').on(table.is_active),
+	eventIdx: index('idx_triggers_event').on(table.event_type, table.is_active)
+}));
+
+/**
+ * Campaign Images table - загруженные изображения для рассылок
+ */
+export const campaignImages = sqliteTable('campaign_images', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	filename: text('filename').notNull(),
+	original_name: text('original_name').notNull(),
+	mime_type: text('mime_type').notNull(),
+	size: integer('size').notNull(),
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+	createdIdx: index('idx_campaign_images_created').on(table.created_at)
+}));
+
+/**
+ * Trigger Logs table - логи срабатывания триггеров
+ */
+export const triggerLogs = sqliteTable('trigger_logs', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	trigger_id: integer('trigger_id')
+		.notNull()
+		.references(() => triggerTemplates.id, { onDelete: 'cascade' }),
+	campaign_id: integer('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
+	loyalty_user_id: integer('loyalty_user_id').references(() => loyaltyUsers.id, { onDelete: 'set null' }),
+	event_data: text('event_data'), // JSON
+	status: text('status', { enum: ['triggered', 'campaign_created', 'skipped', 'error'] }).notNull().default('triggered'),
+	error_message: text('error_message'),
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+	triggerIdx: index('idx_trigger_logs_trigger').on(table.trigger_id),
+	createdIdx: index('idx_trigger_logs_created').on(table.created_at)
+}));
+
 // TypeScript типы, выведенные из схемы
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -318,3 +457,18 @@ export type NewLoyaltySettings = typeof loyaltySettings.$inferInsert;
 
 export type StoreImage = typeof storeImages.$inferSelect;
 export type NewStoreImage = typeof storeImages.$inferInsert;
+
+export type Campaign = typeof campaigns.$inferSelect;
+export type NewCampaign = typeof campaigns.$inferInsert;
+
+export type CampaignRecipient = typeof campaignRecipients.$inferSelect;
+export type NewCampaignRecipient = typeof campaignRecipients.$inferInsert;
+
+export type TriggerTemplate = typeof triggerTemplates.$inferSelect;
+export type NewTriggerTemplate = typeof triggerTemplates.$inferInsert;
+
+export type CampaignImage = typeof campaignImages.$inferSelect;
+export type NewCampaignImage = typeof campaignImages.$inferInsert;
+
+export type TriggerLog = typeof triggerLogs.$inferSelect;
+export type NewTriggerLog = typeof triggerLogs.$inferInsert;

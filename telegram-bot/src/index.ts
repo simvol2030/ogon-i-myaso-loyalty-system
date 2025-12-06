@@ -236,6 +236,99 @@ app.post('/notify-transaction', async (req, res) => {
 	}
 });
 
+// ===== WEBHOOK: Отправка рассылки (campaigns) =====
+
+interface CampaignMessage {
+	chatId: number;
+	text: string;
+	imageUrl?: string;
+	buttonText?: string;
+	buttonUrl?: string;
+}
+
+app.post('/send-campaign-message', async (req, res) => {
+	try {
+		const message: CampaignMessage = req.body;
+
+		console.log('📬 Отправка сообщения кампании:', { chatId: message.chatId, hasImage: !!message.imageUrl });
+
+		const { chatId, text, imageUrl, buttonText, buttonUrl } = message;
+
+		if (!chatId || !text) {
+			return res.status(400).json({ error: 'Missing chatId or text' });
+		}
+
+		// Build inline keyboard if button is provided
+		let keyboard: InlineKeyboard | undefined;
+		if (buttonText && buttonUrl) {
+			keyboard = new InlineKeyboard();
+			// Check if it's a web app URL or regular URL
+			if (buttonUrl.startsWith('https://') && buttonUrl.includes(WEB_APP_URL.replace('https://', ''))) {
+				keyboard.webApp(buttonText, buttonUrl);
+			} else {
+				keyboard.url(buttonText, buttonUrl);
+			}
+		} else if (NODE_ENV === 'production' && WEB_APP_URL.startsWith('https://')) {
+			// Default button to open web app
+			keyboard = new InlineKeyboard().webApp('Мурзи-коины', WEB_APP_URL);
+		}
+
+		// Send message with or without image
+		if (imageUrl) {
+			// Send photo with caption
+			// Determine if imageUrl is local or remote
+			const photoUrl = imageUrl.startsWith('http')
+				? imageUrl
+				: `${process.env.BACKEND_URL || 'http://localhost:3000'}${imageUrl}`;
+
+			await bot.api.sendPhoto(chatId, photoUrl, {
+				caption: text,
+				reply_markup: keyboard
+			});
+		} else {
+			// Send text message
+			await bot.api.sendMessage(chatId, text, {
+				reply_markup: keyboard,
+				parse_mode: 'HTML'
+			});
+		}
+
+		console.log(`✅ Сообщение кампании отправлено: chatId=${chatId}`);
+
+		res.json({ success: true });
+
+	} catch (error) {
+		console.error('❌ Ошибка отправки сообщения кампании:', error);
+
+		if (error && typeof error === "object" && "error_code" in error) {
+			const tgError = error as any;
+
+			if (tgError.error_code === 403) {
+				// User blocked bot
+				return res.status(200).json({
+					success: false,
+					error: 'User blocked bot',
+					code: 403
+				});
+			}
+
+			if (tgError.error_code === 400) {
+				// Bad request (e.g., chat not found)
+				return res.status(200).json({
+					success: false,
+					error: tgError.description || 'Bad request',
+					code: 400
+				});
+			}
+		}
+
+		res.status(500).json({
+			success: false,
+			error: error instanceof Error ? error.message : 'Unknown error'
+		});
+	}
+});
+
 // Health check
 app.get('/health', (req, res) => {
 	res.json({

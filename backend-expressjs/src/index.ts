@@ -21,6 +21,7 @@ import contentRouter from './routes/content';
 
 // Public API routes
 import loyaltyRouter from './routes/api/loyalty';
+import profileRouter from './routes/profile';
 
 // Admin routes
 import adminClientsRouter from './routes/admin/clients';
@@ -31,6 +32,8 @@ import adminStatisticsRouter from './routes/admin/statistics';
 import adminSettingsRouter from './routes/admin/settings';
 import adminDashboardRouter from './routes/admin/dashboard'; // Sprint 5 Task 4.1
 import adminStoreImagesRouter from './routes/admin/store-images';
+import adminCampaignsRouter from './routes/admin/campaigns';
+import adminTriggersRouter from './routes/admin/triggers';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000');
@@ -101,6 +104,7 @@ app.use('/api/stores', storesRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/content', contentRouter);
 app.use('/api/loyalty', loyaltyRouter); // Public loyalty settings endpoint
+app.use('/api/profile', profileRouter); // User profile (birthday, etc.)
 
 // Admin API routes
 app.use('/api/admin/clients', adminClientsRouter);
@@ -111,6 +115,8 @@ app.use('/api/admin/statistics', adminStatisticsRouter);
 app.use('/api/admin/settings', adminSettingsRouter);
 app.use('/api/admin/dashboard', adminDashboardRouter); // Sprint 5 Task 4.1
 app.use('/api/admin/stores', adminStoreImagesRouter); // Store images (nested under stores)
+app.use('/api/admin/campaigns', adminCampaignsRouter); // Campaigns & mailings
+app.use('/api/admin/triggers', adminTriggersRouter); // Trigger templates
 
 // Обработка 404
 app.use((req, res) => {

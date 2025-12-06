@@ -8,6 +8,7 @@
   import NotificationsModal from '$lib/components/loyalty/ui/NotificationsModal.svelte';
   import PaymentModal from '$lib/components/loyalty/ui/PaymentModal.svelte';
   import ReferralModal from '$lib/components/loyalty/ui/ReferralModal.svelte';
+  import BirthdayModal from '$lib/components/loyalty/ui/BirthdayModal.svelte';
   import { modalStore } from '$lib/stores/modal.svelte';
 
   let { data } = $props();
@@ -49,6 +50,10 @@
 {:else if modalStore.type === 'referral'}
   <Modal title="🎁 Пригласить друзей">
     <ReferralModal />
+  </Modal>
+{:else if modalStore.type === 'birthday'}
+  <Modal title="🎂 День рождения">
+    <BirthdayModal />
   </Modal>
 {/if}
 

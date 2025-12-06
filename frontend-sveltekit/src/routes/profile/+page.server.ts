@@ -18,6 +18,14 @@ export const load: PageServerLoad = async () => {
   // H-004 FIX: Removed "pets" item - not implemented in MVP
   const profileMenu = [
     {
+      id: 'birthday',
+      icon: '🎂',
+      iconColor: 'pink',
+      title: 'День рождения',
+      description: 'Укажите дату для получения бонуса',
+      action: 'openBirthdayModal'
+    },
+    {
       id: 'notifications',
       icon: '🔔',
       iconColor: 'blue',

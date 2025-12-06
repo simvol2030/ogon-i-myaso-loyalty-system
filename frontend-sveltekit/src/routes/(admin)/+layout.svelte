@@ -68,6 +68,14 @@
 					<span class="icon">🎁</span>
 					<span>Акции</span>
 				</a>
+				<a href="/campaigns" class:active={$page.url.pathname.startsWith('/campaigns')} onclick={closeMobileMenu}>
+					<span class="icon">📨</span>
+					<span>Рассылки</span>
+				</a>
+				<a href="/triggers" class:active={$page.url.pathname.startsWith('/triggers')} onclick={closeMobileMenu}>
+					<span class="icon">⚡</span>
+					<span>Триггеры</span>
+				</a>
 				<a href="/products-admin" class:active={$page.url.pathname.startsWith('/products-admin')} onclick={closeMobileMenu}>
 					<span class="icon">🛍️</span>
 					<span>Товары</span>
