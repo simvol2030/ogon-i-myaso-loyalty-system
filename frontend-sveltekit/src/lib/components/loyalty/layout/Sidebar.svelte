@@ -94,7 +94,7 @@
   }
 
   .sidebar-item.active {
-    background: rgba(255, 107, 0, 0.1);
+    background: color-mix(in srgb, var(--primary-orange) 10%, transparent);
     color: var(--primary-orange);
   }
 

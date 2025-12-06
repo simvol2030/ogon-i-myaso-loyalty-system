@@ -77,13 +77,18 @@
       {#if item.isExternal}
         <a
           href={item.href}
-          class="sidebar-item"
+          class="sidebar-item external"
           target="_blank"
           rel="noopener noreferrer"
           onclick={handleNavClick}
         >
           <span class="sidebar-icon">{item.icon}</span>
           <span>{item.label}</span>
+          <svg class="external-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
         </a>
       {:else}
         <a
@@ -200,13 +205,23 @@
   }
 
   .sidebar-item.active {
-    background: rgba(255, 107, 0, 0.1);
+    background: color-mix(in srgb, var(--primary-orange) 10%, transparent);
     color: var(--primary-orange);
   }
 
   .sidebar-icon {
     font-size: 24px;
     color: var(--primary-orange);
+    flex-shrink: 0;
+  }
+
+  .sidebar-item.external {
+    justify-content: flex-start;
+  }
+
+  .external-icon {
+    margin-left: auto;
+    opacity: 0.5;
     flex-shrink: 0;
   }
 </style>

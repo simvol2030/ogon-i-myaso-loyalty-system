@@ -72,8 +72,8 @@
 
   .nav-item.active {
     color: var(--primary-orange);
-    background: #fff7ed;
-    box-shadow: 0 10px 15px -3px rgba(255, 107, 0, 0.1);
+    background: color-mix(in srgb, var(--primary-orange) 10%, transparent);
+    box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--primary-orange) 15%, transparent);
     transform: scale(1.05);
   }
 

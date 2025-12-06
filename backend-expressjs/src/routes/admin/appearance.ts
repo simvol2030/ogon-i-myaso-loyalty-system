@@ -8,6 +8,7 @@ import { db } from '../../db/client';
 import { appCustomization } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticateSession, requireRole } from '../../middleware/session-auth';
+import { invalidateCustomizationCache } from '../api/customization';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -104,6 +105,12 @@ function validateAppearanceData(data: any): string | null {
 				return 'bottomNavItems должен быть массивом';
 			}
 
+			// BUG-6 FIX: At least one visible item required
+			const visibleItems = items.filter((item: any) => item.visible !== false);
+			if (visibleItems.length === 0) {
+				return 'Должен быть хотя бы один видимый пункт в нижней навигации';
+			}
+
 			for (const item of items) {
 				if (!item.id || !item.href || !item.label || !item.icon) {
 					return 'Каждый элемент навигации должен иметь id, href, label и icon';
@@ -133,6 +140,10 @@ function validateAppearanceData(data: any): string | null {
 				}
 				if (/<|>/.test(item.label)) {
 					return 'Названия пунктов меню не могут содержать символы < или >';
+				}
+				// BUG-5 FIX: External links must be valid URLs
+				if (item.isExternal && !item.href.startsWith('http://') && !item.href.startsWith('https://')) {
+					return `Внешняя ссылка "${item.label}" должна начинаться с http:// или https://`;
 				}
 			}
 		} catch (e) {
@@ -262,6 +273,9 @@ router.put('/', requireRole('super-admin', 'editor'), async (req, res) => {
 		// Update settings
 		await db.update(appCustomization).set(updates).where(eq(appCustomization.id, 1));
 
+		// Invalidate public API cache
+		invalidateCustomizationCache();
+
 		// Log changes
 		const adminName = (req as any).user?.name || 'Unknown Admin';
 		const adminId = (req as any).user?.id || 0;
@@ -349,6 +363,9 @@ router.post('/logo', requireRole('super-admin', 'editor'), upload.single('logo')
 			}
 		}
 
+		// Invalidate public API cache
+		invalidateCustomizationCache();
+
 		// Log upload
 		const adminName = (req as any).user?.name || 'Unknown Admin';
 		console.log(`[LOGO UPLOAD] Admin (${adminName}) uploaded new logo: ${outputFilename}`);
@@ -391,6 +408,9 @@ router.delete('/logo', requireRole('super-admin', 'editor'), async (req, res) =>
 				fs.unlinkSync(oldPath);
 			}
 		}
+
+		// Invalidate public API cache
+		invalidateCustomizationCache();
 
 		res.json({
 			success: true,
