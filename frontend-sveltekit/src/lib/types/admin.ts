@@ -176,6 +176,48 @@ export interface PromotionsListParams {
 }
 
 // ============================================
+// CATEGORIES (Shop Extension)
+// ============================================
+
+/**
+ * Category - категория товаров
+ */
+export interface Category {
+	id: number;
+	name: string;
+	slug: string;
+	description: string | null;
+	image: string | null;
+	parentId: number | null;
+	position: number;
+	isActive: boolean;
+	productCount?: number;
+	subcategories?: Category[];
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+/**
+ * CategoryFormData - форма создания/редактирования категории
+ */
+export interface CategoryFormData {
+	name: string;
+	description?: string;
+	image?: string;
+	parentId?: number | null;
+	isActive: boolean;
+}
+
+/**
+ * CategoriesListParams - параметры для списка категорий
+ */
+export interface CategoriesListParams {
+	search?: string;
+	status?: 'all' | 'active' | 'inactive';
+	parent?: 'root' | 'all' | number;
+}
+
+// ============================================
 // PRODUCTS (Wave 1)
 // ============================================
 

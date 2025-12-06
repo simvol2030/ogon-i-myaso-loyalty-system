@@ -72,6 +72,10 @@
 					<span class="icon">🛍️</span>
 					<span>Товары</span>
 				</a>
+				<a href="/categories" class:active={$page.url.pathname.startsWith('/categories')} onclick={closeMobileMenu}>
+					<span class="icon">📁</span>
+					<span>Категории</span>
+				</a>
 				<a href="/store-list" class:active={$page.url.pathname.startsWith('/store-list')} onclick={closeMobileMenu}>
 					<span class="icon">🏪</span>
 					<span>Магазины</span>
