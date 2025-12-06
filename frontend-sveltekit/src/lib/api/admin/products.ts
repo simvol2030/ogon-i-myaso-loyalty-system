@@ -94,5 +94,59 @@ export const productsAPI = {
 		}
 		const json = await response.json();
 		if (!json.success) throw new Error(json.error || 'Unknown error');
+	},
+
+	/**
+	 * Import products from CSV/JSON file
+	 */
+	async importProducts(
+		file: File,
+		options: {
+			mode?: 'create_only' | 'update_only' | 'create_or_update';
+			defaultCategory?: string;
+			defaultImage?: string;
+		} = {}
+	): Promise<ImportResult> {
+		const formData = new FormData();
+		formData.append('file', file);
+
+		if (options.mode) formData.append('mode', options.mode);
+		if (options.defaultCategory) formData.append('defaultCategory', options.defaultCategory);
+		if (options.defaultImage) formData.append('defaultImage', options.defaultImage);
+
+		const response = await fetch(`${API_BASE_URL}/admin/products/import`, {
+			method: 'POST',
+			body: formData,
+			credentials: 'include'
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			try {
+				const json = JSON.parse(errorText);
+				throw new Error(json.error || 'Import failed');
+			} catch {
+				throw new Error(`Import failed: ${response.status}`);
+			}
+		}
+
+		const json = await response.json();
+		if (!json.success) throw new Error(json.error || 'Unknown error');
+		return json.data as ImportResult;
+	},
+
+	/**
+	 * Download import template
+	 */
+	getTemplateUrl(format: 'csv' | 'json' = 'csv'): string {
+		return `${API_BASE_URL}/admin/products/import/template?format=${format}`;
 	}
 };
+
+export interface ImportResult {
+	total: number;
+	created: number;
+	updated: number;
+	skipped: number;
+	errors: string[];
+}

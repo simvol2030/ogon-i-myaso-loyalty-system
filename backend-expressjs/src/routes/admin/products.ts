@@ -13,6 +13,7 @@ import { products, categories } from '../../db/schema';
 import { eq, and, desc, like, sql, asc } from 'drizzle-orm';
 import { authenticateSession, requireRole } from '../../middleware/session-auth';
 import { validateProductData } from '../../utils/validation';
+import { parse as csvParse } from 'csv-parse/sync';
 
 const router = Router();
 
@@ -400,6 +401,294 @@ router.patch('/:id/toggle-active', requireRole('super-admin', 'editor'), async (
 	} catch (error: any) {
 		console.error('Error toggling product:', error);
 		res.status(500).json({ success: false, error: 'Internal server error' });
+	}
+});
+
+// Multer configuration for import files
+const importUpload = multer({
+	storage: multer.memoryStorage(),
+	limits: {
+		fileSize: 10 * 1024 * 1024 // 10MB max for import files
+	},
+	fileFilter: (req, file, cb) => {
+		const allowedTypes = ['text/csv', 'application/json', 'text/plain'];
+		const allowedExts = ['.csv', '.json'];
+		const ext = path.extname(file.originalname).toLowerCase();
+
+		if (allowedTypes.includes(file.mimetype) || allowedExts.includes(ext)) {
+			cb(null, true);
+		} else {
+			cb(new Error('Разрешены только файлы CSV и JSON'));
+		}
+	}
+});
+
+interface ImportProductRow {
+	name?: string;
+	description?: string;
+	price?: string | number;
+	oldPrice?: string | number;
+	old_price?: string | number;
+	quantityInfo?: string;
+	quantity_info?: string;
+	image?: string;
+	category?: string;
+	categoryId?: string | number;
+	category_id?: string | number;
+	sku?: string;
+	position?: string | number;
+	isActive?: boolean | string | number;
+	is_active?: boolean | string | number;
+	showOnHome?: boolean | string | number;
+	show_on_home?: boolean | string | number;
+	isRecommendation?: boolean | string | number;
+	is_recommendation?: boolean | string | number;
+}
+
+interface ImportResult {
+	created: number;
+	updated: number;
+	skipped: number;
+	errors: string[];
+}
+
+// Helper: Parse boolean value from various formats
+function parseBoolean(value: any): boolean {
+	if (typeof value === 'boolean') return value;
+	if (typeof value === 'number') return value === 1;
+	if (typeof value === 'string') {
+		const lower = value.toLowerCase().trim();
+		return lower === 'true' || lower === '1' || lower === 'yes' || lower === 'да';
+	}
+	return false;
+}
+
+// Helper: Parse number value
+function parseNumber(value: any): number | null {
+	if (value === null || value === undefined || value === '') return null;
+	const num = parseFloat(String(value).replace(',', '.'));
+	return isNaN(num) ? null : num;
+}
+
+// Helper: Normalize row keys (support both camelCase and snake_case)
+function normalizeRow(row: ImportProductRow) {
+	return {
+		name: row.name?.trim(),
+		description: row.description?.trim() || null,
+		price: parseNumber(row.price),
+		oldPrice: parseNumber(row.oldPrice ?? row.old_price),
+		quantityInfo: (row.quantityInfo ?? row.quantity_info)?.trim() || null,
+		image: row.image?.trim() || null,
+		category: row.category?.trim() || null,
+		categoryId: parseNumber(row.categoryId ?? row.category_id),
+		sku: row.sku?.trim() || null,
+		position: parseNumber(row.position) ?? 0,
+		isActive: parseBoolean(row.isActive ?? row.is_active ?? true),
+		showOnHome: parseBoolean(row.showOnHome ?? row.show_on_home ?? false),
+		isRecommendation: parseBoolean(row.isRecommendation ?? row.is_recommendation ?? false)
+	};
+}
+
+/**
+ * POST /api/admin/products/import - Import products from CSV/JSON
+ * ONLY: super-admin, editor
+ *
+ * Supports:
+ * - CSV format with headers
+ * - JSON format (array of objects)
+ * - Updates existing products by SKU (if provided)
+ * - Creates new products otherwise
+ */
+router.post('/import', requireRole('super-admin', 'editor'), importUpload.single('file'), async (req, res) => {
+	try {
+		const file = req.file;
+		const { mode = 'create_or_update', defaultCategory, defaultImage } = req.body;
+
+		if (!file) {
+			return res.status(400).json({ success: false, error: 'Файл не загружен' });
+		}
+
+		const fileContent = file.buffer.toString('utf-8');
+		const ext = path.extname(file.originalname).toLowerCase();
+
+		let rows: ImportProductRow[] = [];
+
+		// Parse file based on format
+		try {
+			if (ext === '.json' || file.mimetype === 'application/json') {
+				const parsed = JSON.parse(fileContent);
+				rows = Array.isArray(parsed) ? parsed : [parsed];
+			} else {
+				// CSV parsing
+				rows = csvParse(fileContent, {
+					columns: true,
+					skip_empty_lines: true,
+					trim: true,
+					bom: true
+				});
+			}
+		} catch (parseError: any) {
+			return res.status(400).json({
+				success: false,
+				error: `Ошибка разбора файла: ${parseError.message}`
+			});
+		}
+
+		if (rows.length === 0) {
+			return res.status(400).json({
+				success: false,
+				error: 'Файл пустой или не содержит данных'
+			});
+		}
+
+		const result: ImportResult = {
+			created: 0,
+			updated: 0,
+			skipped: 0,
+			errors: []
+		};
+
+		// Get existing SKUs for update detection
+		const existingProducts = await db
+			.select({ id: products.id, sku: products.sku })
+			.from(products)
+			.where(sql`${products.sku} IS NOT NULL`);
+
+		const skuToId = new Map<string, number>();
+		for (const p of existingProducts) {
+			if (p.sku) {
+				skuToId.set(p.sku.toLowerCase(), p.id);
+			}
+		}
+
+		// Process each row
+		for (let i = 0; i < rows.length; i++) {
+			const rowNum = i + 1;
+			try {
+				const normalized = normalizeRow(rows[i]);
+
+				// Validate required fields
+				if (!normalized.name) {
+					result.errors.push(`Строка ${rowNum}: отсутствует название товара`);
+					result.skipped++;
+					continue;
+				}
+
+				if (normalized.price === null || normalized.price <= 0) {
+					result.errors.push(`Строка ${rowNum}: некорректная цена`);
+					result.skipped++;
+					continue;
+				}
+
+				// Apply defaults
+				const category = normalized.category || defaultCategory || 'Без категории';
+				const image = normalized.image || defaultImage || '/api/uploads/products/placeholder.webp';
+
+				const productData = {
+					name: normalized.name,
+					description: normalized.description,
+					price: normalized.price,
+					old_price: normalized.oldPrice,
+					quantity_info: normalized.quantityInfo,
+					image: image,
+					category: category,
+					category_id: normalized.categoryId,
+					sku: normalized.sku,
+					position: normalized.position || 0,
+					is_active: normalized.isActive,
+					show_on_home: normalized.showOnHome,
+					is_recommendation: normalized.isRecommendation
+				};
+
+				// Check if product exists (by SKU)
+				const existingId = normalized.sku ? skuToId.get(normalized.sku.toLowerCase()) : null;
+
+				if (existingId && (mode === 'update_only' || mode === 'create_or_update')) {
+					// Update existing product
+					await db
+						.update(products)
+						.set(productData)
+						.where(eq(products.id, existingId));
+					result.updated++;
+				} else if (mode === 'update_only' && !existingId) {
+					// Skip - update only mode but product doesn't exist
+					result.errors.push(`Строка ${rowNum}: товар с SKU "${normalized.sku}" не найден`);
+					result.skipped++;
+				} else {
+					// Create new product
+					await db.insert(products).values(productData);
+					result.created++;
+
+					// Add new SKU to map to prevent duplicates in same import
+					if (normalized.sku) {
+						const [newProduct] = await db
+							.select({ id: products.id })
+							.from(products)
+							.where(eq(products.sku, normalized.sku))
+							.limit(1);
+						if (newProduct) {
+							skuToId.set(normalized.sku.toLowerCase(), newProduct.id);
+						}
+					}
+				}
+			} catch (rowError: any) {
+				result.errors.push(`Строка ${rowNum}: ${rowError.message}`);
+				result.skipped++;
+			}
+		}
+
+		res.json({
+			success: true,
+			data: {
+				total: rows.length,
+				created: result.created,
+				updated: result.updated,
+				skipped: result.skipped,
+				errors: result.errors.slice(0, 50) // Limit errors in response
+			},
+			message: `Импорт завершен: создано ${result.created}, обновлено ${result.updated}, пропущено ${result.skipped}`
+		});
+
+	} catch (error: any) {
+		console.error('Error importing products:', error);
+		res.status(500).json({ success: false, error: error.message || 'Internal server error' });
+	}
+});
+
+/**
+ * GET /api/admin/products/import/template - Download import template
+ */
+router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) => {
+	const format = req.query.format as string || 'csv';
+
+	if (format === 'json') {
+		const template = [
+			{
+				name: 'Пример товара',
+				description: 'Описание товара',
+				price: 100.00,
+				oldPrice: 120.00,
+				quantityInfo: '100г',
+				image: '/api/uploads/products/example.webp',
+				category: 'Категория',
+				sku: 'SKU-001',
+				isActive: true,
+				showOnHome: false,
+				isRecommendation: false
+			}
+		];
+
+		res.setHeader('Content-Type', 'application/json');
+		res.setHeader('Content-Disposition', 'attachment; filename=import_template.json');
+		res.send(JSON.stringify(template, null, 2));
+	} else {
+		const csvContent = `name,description,price,oldPrice,quantityInfo,image,category,sku,isActive,showOnHome,isRecommendation
+"Пример товара","Описание товара",100.00,120.00,"100г","/api/uploads/products/example.webp","Категория","SKU-001",true,false,false`;
+
+		res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+		res.setHeader('Content-Disposition', 'attachment; filename=import_template.csv');
+		// Add BOM for Excel compatibility
+		res.send('\ufeff' + csvContent);
 	}
 });
 

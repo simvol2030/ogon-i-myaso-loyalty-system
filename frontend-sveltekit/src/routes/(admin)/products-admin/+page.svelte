@@ -95,7 +95,13 @@
 			<h1>Товары</h1>
 			<p class="text-muted">Всего: {data.pagination.total}</p>
 		</div>
-		<Button variant="primary" onclick={openCreateModal}>+ Создать товар</Button>
+		<div class="header-actions">
+			<a href="/products-admin/import" class="import-btn">
+				<span class="icon">📥</span>
+				Импорт
+			</a>
+			<Button variant="primary" onclick={openCreateModal}>+ Создать товар</Button>
+		</div>
 	</div>
 
 	<div class="filters-panel">
@@ -197,6 +203,30 @@
 	.text-muted {
 		color: #6b7280;
 		margin: 0;
+	}
+
+	.header-actions {
+		display: flex;
+		gap: 0.75rem;
+		align-items: center;
+	}
+
+	.import-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		background: var(--color-bg-secondary, #f3f4f6);
+		border: 1px solid #e5e7eb;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		color: #374151;
+		text-decoration: none;
+		transition: background 0.2s;
+	}
+
+	.import-btn:hover {
+		background: #e5e7eb;
 	}
 
 	.filters-panel {
