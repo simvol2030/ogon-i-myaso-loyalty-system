@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { db } from '../../db/client';
 import { shopSettings } from '../../db/schema';
 import { eq } from 'drizzle-orm';
+import { clearSettingsCache } from '../../services/notifications';
 
 const router = Router();
 
@@ -182,6 +183,9 @@ router.put('/', async (req, res) => {
 				...updateData
 			});
 		}
+
+		// Clear notification settings cache
+		clearSettingsCache();
 
 		res.json({
 			success: true,

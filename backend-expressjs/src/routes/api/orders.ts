@@ -16,6 +16,7 @@ import {
 	stores
 } from '../../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { notifyNewOrder } from '../../services/notifications';
 
 const router = Router();
 
@@ -247,6 +248,36 @@ router.post('/', async (req, res) => {
 		await db
 			.delete(cartItems)
 			.where(eq(cartItems.session_id, sessionId));
+
+		// Send notification (non-blocking)
+		let storeName: string | undefined;
+		if (deliveryType === 'pickup' && storeId) {
+			const [storeData] = await db
+				.select({ name: stores.name })
+				.from(stores)
+				.where(eq(stores.id, storeId))
+				.limit(1);
+			storeName = storeData?.name;
+		}
+
+		notifyNewOrder({
+			orderNumber,
+			customerName,
+			customerPhone,
+			customerEmail: customerEmail || undefined,
+			deliveryType,
+			deliveryAddress: deliveryType === 'delivery' ? deliveryAddress : undefined,
+			storeName,
+			items: activeItems.map(item => ({
+				name: item.productName || 'Unknown',
+				quantity: item.quantity,
+				price: item.productPrice || 0
+			})),
+			subtotal: toRubles(subtotal),
+			deliveryCost: toRubles(deliveryCost),
+			total: toRubles(total),
+			notes: notes || undefined
+		}).catch(err => console.error('Failed to send notification:', err));
 
 		// Return order details
 		res.status(201).json({

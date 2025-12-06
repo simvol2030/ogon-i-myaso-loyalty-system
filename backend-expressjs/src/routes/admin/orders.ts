@@ -13,6 +13,7 @@ import {
 	loyaltyUsers
 } from '../../db/schema';
 import { eq, desc, and, gte, lte, like, or, sql } from 'drizzle-orm';
+import { notifyStatusChange } from '../../services/notifications';
 
 const router = Router();
 
@@ -365,6 +366,30 @@ router.put('/:id/status', async (req, res) => {
 			changed_by: changedBy || 'admin',
 			notes: notes || null
 		});
+
+		// Get customer info for notification and linked user for customer notification
+		let customerTelegramId: number | undefined;
+		if (order.user_id) {
+			const [user] = await db
+				.select({ telegramUserId: loyaltyUsers.telegram_user_id })
+				.from(loyaltyUsers)
+				.where(eq(loyaltyUsers.id, order.user_id))
+				.limit(1);
+			customerTelegramId = user?.telegramUserId;
+		}
+
+		// Send notification (non-blocking)
+		notifyStatusChange(
+			{
+				orderNumber: order.order_number,
+				customerName: order.customer_name,
+				customerPhone: order.customer_phone,
+				oldStatus,
+				newStatus: status,
+				notes: notes || undefined
+			},
+			customerTelegramId
+		).catch(err => console.error('Failed to send notification:', err));
 
 		res.json({
 			success: true,
