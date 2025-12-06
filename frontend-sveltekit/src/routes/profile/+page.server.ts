@@ -24,13 +24,15 @@ export const load: PageServerLoad = async () => {
       title: 'День рождения',
       description: 'Укажите дату для получения бонуса',
       action: 'openBirthdayModal'
+    },
+    {
       id: 'orders',
       icon: '📦',
       iconColor: 'orange',
       title: 'Мои заказы',
       description: 'История заказов магазина',
       action: 'link',
-      href: '/orders'
+      href: '/my-orders'
     },
     {
       id: 'notifications',
