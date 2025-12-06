@@ -92,6 +92,8 @@ export async function initializeDatabase() {
 			}
 		} catch (error) {
 			console.log('ℹ️ App customization table already exists or error:', error);
+		}
+
 		// Create sellers table if it doesn't exist (for PWA seller app)
 		try {
 			nativeClient.exec(`
