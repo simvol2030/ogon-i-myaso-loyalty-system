@@ -1,10 +1,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
+	interface CategoryItem {
+		id: number;
+		name: string;
+		slug: string;
+		image: string | null;
+	}
+
 	let { data } = $props();
 
 	let searchValue = $state(data.filters.search);
 	let selectedCategory = $state(data.filters.category);
+
+	// Категории с новой структурой (slug/name/image)
+	const categoriesNew = data.categories as CategoryItem[];
 
 	function handleSearch() {
 		const params = new URLSearchParams();
@@ -13,8 +23,8 @@
 		goto(`/products?${params.toString()}`);
 	}
 
-	function handleCategoryChange(category: string) {
-		selectedCategory = category;
+	function handleCategoryChange(categorySlug: string) {
+		selectedCategory = categorySlug;
 		handleSearch();
 	}
 
@@ -22,6 +32,13 @@
 		searchValue = '';
 		selectedCategory = 'all';
 		goto('/products');
+	}
+
+	// Получаем название категории по slug для отображения
+	function getCategoryName(slug: string): string {
+		if (slug === 'all') return 'Все';
+		const category = categoriesNew.find(c => c.slug === slug);
+		return category?.name || slug;
 	}
 </script>
 
@@ -58,13 +75,13 @@
 			>
 				Все
 			</button>
-			{#each data.categories as category}
+			{#each categoriesNew as category (category.id)}
 				<button
 					class="category-btn"
-					class:active={selectedCategory === category}
-					onclick={() => handleCategoryChange(category)}
+					class:active={selectedCategory === category.slug}
+					onclick={() => handleCategoryChange(category.slug)}
 				>
-					{category}
+					{category.name}
 				</button>
 			{/each}
 		</div>

@@ -1,21 +1,48 @@
 import { db } from '$lib/server/db/client';
-import { products } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { products, categories } from '$lib/server/db/schema';
+import { eq, and, like, asc, desc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
 	// Получаем параметры фильтрации из URL
-	const category = url.searchParams.get('category') || 'all';
+	const categorySlug = url.searchParams.get('category') || 'all';
 	const search = url.searchParams.get('search') || '';
 
-	// Загружаем товары с фильтрацией
-	let query = db.select().from(products).where(eq(products.is_active, true));
+	// Загружаем активные категории из таблицы categories
+	const allCategories = await db
+		.select()
+		.from(categories)
+		.where(eq(categories.is_active, true))
+		.orderBy(asc(categories.position), asc(categories.name));
 
-	let allProducts = await query;
+	// Формируем структуру категорий для UI
+	const categoryList = allCategories.map(c => ({
+		id: c.id,
+		name: c.name,
+		slug: c.slug,
+		image: c.image
+	}));
 
-	// Фильтрация по категории (на клиенте, т.к. Drizzle ORM не поддерживает динамические where)
-	if (category !== 'all') {
-		allProducts = allProducts.filter((p) => p.category === category);
+	// Загружаем товары
+	let allProducts = await db
+		.select()
+		.from(products)
+		.where(eq(products.is_active, true))
+		.orderBy(asc(products.position), desc(products.id));
+
+	// Фильтрация по категории
+	if (categorySlug !== 'all') {
+		// Сначала найдём категорию по slug
+		const selectedCategory = allCategories.find(c => c.slug === categorySlug);
+		if (selectedCategory) {
+			// Фильтруем по category_id (новая система)
+			allProducts = allProducts.filter(
+				(p) => p.category_id === selectedCategory.id || p.category === selectedCategory.name
+			);
+		} else {
+			// Fallback: фильтруем по legacy текстовой категории
+			allProducts = allProducts.filter((p) => p.category === categorySlug);
+		}
 	}
 
 	// Фильтрация по поиску
@@ -24,19 +51,13 @@ export const load: PageServerLoad = async ({ url }) => {
 		allProducts = allProducts.filter((p) => p.name.toLowerCase().includes(searchLower));
 	}
 
-	// Получаем уникальные категории для фильтра
-	const allProductsForCategories = await db
-		.select()
-		.from(products)
-		.where(eq(products.is_active, true));
-
-	const categories = [...new Set(allProductsForCategories.map((p) => p.category))].sort();
-
 	return {
 		products: allProducts,
-		categories,
+		categories: categoryList,
+		// Также передаём legacy категории для обратной совместимости
+		legacyCategories: [...new Set(allProducts.map((p) => p.category))].filter(Boolean).sort(),
 		filters: {
-			category,
+			category: categorySlug,
 			search
 		}
 	};
