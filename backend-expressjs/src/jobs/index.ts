@@ -100,11 +100,11 @@ export function initScheduledJobs() {
 
 			if (isDevelopment) {
 				console.log(
-					`[CRON] Birthday trigger completed (DRY-RUN). Found ${result.usersWithBirthday} birthdays, would send ${result.messagesSent} messages`
+					`[CRON] Birthday trigger completed (DRY-RUN). Found ${result.usersWithBirthday} birthdays, would create ${result.campaignsCreated} campaigns`
 				);
 			} else {
 				console.log(
-					`[CRON] Birthday trigger completed. Found ${result.usersWithBirthday} birthdays, sent ${result.messagesSent} messages`
+					`[CRON] Birthday trigger completed. Found ${result.usersWithBirthday} birthdays, created ${result.campaignsCreated} campaigns`
 				);
 				if (result.errors.length > 0) {
 					console.error('[CRON] Birthday trigger errors:', result.errors);

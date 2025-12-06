@@ -18,13 +18,17 @@ declare global {
 				expand: () => void;
 				enableClosingConfirmation: () => void;
 				colorScheme?: 'light' | 'dark';
+				initData?: string; // Raw initData for server validation
 				initDataUnsafe?: {
 					user?: {
 						id: number;
 						first_name: string;
 						last_name?: string;
 						username?: string;
+						language_code?: string;
 					};
+					auth_date?: number;
+					hash?: string;
 				};
 			};
 		};
