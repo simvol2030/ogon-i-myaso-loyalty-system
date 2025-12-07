@@ -45,6 +45,12 @@ interface WelcomeMessage {
 	is_active: boolean;
 }
 
+interface APIResponse {
+	success: boolean;
+	data?: WelcomeMessage[];
+	error?: string;
+}
+
 // ===== ФУНКЦИИ ДЛЯ РАБОТЫ С API =====
 
 /**
@@ -53,7 +59,7 @@ interface WelcomeMessage {
 async function getActiveWelcomeMessages(): Promise<WelcomeMessage[]> {
 	try {
 		const response = await fetch(`${API_BASE_URL}/admin/welcome-messages/active`);
-		const json = await response.json();
+		const json = await response.json() as APIResponse;
 
 		if (!json.success) {
 			console.error('Failed to fetch welcome messages:', json.error);
@@ -147,11 +153,6 @@ bot.command('balance', async (ctx) => {
 	await ctx.reply('Откройте карту лояльности чтобы увидеть ваш текущий баланс:', {
 		reply_markup: keyboard
 	});
-});
-
-// ===== HANDLER: /rules =====
-bot.command('rules', async (ctx) => {
-	await ctx.reply(PROGRAM_RULES);
 });
 
 // ===== HANDLER: Любой текст =====
