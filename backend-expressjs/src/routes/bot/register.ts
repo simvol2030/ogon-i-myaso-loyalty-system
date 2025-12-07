@@ -114,10 +114,10 @@ router.post('/register', async (req, res) => {
 			current_balance: welcomeBonus,
 			total_purchases: 0,
 			total_saved: 0,
-			first_login_bonus_claimed: 1, // Бонус начислен при регистрации
+			first_login_bonus_claimed: true, // Бонус начислен при регистрации
 			registration_date: now,
 			last_activity: now,
-			is_active: 1
+			is_active: true
 		}).returning();
 
 		console.log(`[BOT API] New user registered: telegram_user_id=${telegramUserId}, card=${cardNumber}, bonus=${welcomeBonus}₽`);
