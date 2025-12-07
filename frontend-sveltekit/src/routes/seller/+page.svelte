@@ -160,9 +160,9 @@
 
 			if (response.ok) {
 				const data = await response.json();
-				if (data.customer) {
+				if (data && data.id) {
 					// Переходим на страницу транзакции с данными клиента
-					goto(`/seller/transaction?customerId=${data.customer.id}&card=${card}`);
+					goto(`/seller/transaction?customerId=${data.id}&card=${card}`);
 				} else {
 					searchError = 'Клиент не найден';
 				}
