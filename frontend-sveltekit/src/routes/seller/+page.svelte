@@ -8,6 +8,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
+	import PWAInstallButton from '$lib/components/seller/PWAInstallButton.svelte';
 
 	// QR Scanner
 	let Html5Qrcode: any = $state(null);
@@ -103,9 +104,9 @@
 		} catch (err: any) {
 			console.error('Scanner start error:', err);
 			if (err.message?.includes('Permission')) {
-				scannerError = 'Разрешите доступ к камере';
+				scannerError = 'camera_permission';
 			} else {
-				scannerError = 'Не удалось запустить камеру';
+				scannerError = 'camera_failed';
 			}
 		}
 	}
@@ -216,7 +217,17 @@
 				{#if !isScannerActive}
 					<div class="scanner-overlay">
 						{#if scannerError}
-							<p class="scanner-error">{scannerError}</p>
+							<div class="scanner-error">
+								{#if scannerError === 'camera_permission'}
+									<p class="error-title">❌ Нет доступа к камере</p>
+									<p class="error-hint">💡 Установите приложение для работы камеры</p>
+								{:else if scannerError === 'camera_failed'}
+									<p class="error-title">❌ Не удалось запустить камеру</p>
+									<p class="error-hint">💡 Установите приложение или используйте ввод вручную</p>
+								{:else}
+									<p class="error-title">{scannerError}</p>
+								{/if}
+							</div>
 						{/if}
 						<button class="start-scanner-btn" onclick={startScanner} disabled={isSearching}>
 							<span class="camera-icon">📷</span>
@@ -308,6 +319,9 @@
 	</section>
 </div>
 
+<!-- PWA Install Button (floating) -->
+<PWAInstallButton variant="floating" />
+
 <style>
 	.seller-main {
 		flex: 1;
@@ -361,10 +375,25 @@
 	}
 
 	.scanner-error {
-		color: #ef4444;
-		font-size: 14px;
 		text-align: center;
-		padding: 0 16px;
+		padding: 12px 16px;
+		background: rgba(239, 68, 68, 0.1);
+		border-radius: 12px;
+		margin-bottom: 16px;
+	}
+
+	.error-title {
+		color: #ef4444;
+		font-size: 15px;
+		font-weight: 600;
+		margin: 0 0 8px 0;
+	}
+
+	.error-hint {
+		color: #f59e0b;
+		font-size: 13px;
+		margin: 0;
+		line-height: 1.4;
 	}
 
 	.start-scanner-btn {
