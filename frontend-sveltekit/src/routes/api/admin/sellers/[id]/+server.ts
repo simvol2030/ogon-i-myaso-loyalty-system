@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-const BACKEND_URL = 'http://localhost:3015';
+const BACKEND_URL = 'http://localhost:3007';
 
 // GET /api/admin/sellers/:id - получить продавца
 export const GET: RequestHandler = async ({ params, fetch }) => {

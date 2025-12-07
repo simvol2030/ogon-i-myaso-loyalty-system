@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 // Server-side proxy должен использовать ВНУТРЕННИЙ backend URL (не PUBLIC_BACKEND_URL!)
-const BACKEND_URL = 'http://localhost:3015';
+const BACKEND_URL = 'http://localhost:3007';
 
 /**
  * Proxy endpoint для health check backend
