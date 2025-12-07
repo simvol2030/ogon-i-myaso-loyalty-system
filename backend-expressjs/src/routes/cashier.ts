@@ -323,11 +323,15 @@ router.post('/redeem', async (req, res) => {
 		// Use available balance (not total balance) for validation
 		const effectiveBalance = balanceCheck.availableBalance;
 
+		// 7. Get loyalty settings for max discount percentage
+		const loyaltySettings = await getLoyaltySettings();
+
 		// 7. Validate pointsToRedeem against available balance and purchase amount
 		const pointsValidation = validatePointsToRedeem(
 			pointsToRedeem,
 			effectiveBalance, // Use available balance, not total balance
-			purchaseAmount
+			purchaseAmount,
+			loyaltySettings.max_discount_percent // Dynamic max discount from settings
 		);
 		if (!pointsValidation.valid) {
 			const errorMessage = pointsValidation.error ?? 'Ошибка валидации баллов';
@@ -350,9 +354,7 @@ router.post('/redeem', async (req, res) => {
 			});
 		}
 
-		// 8. Get loyalty settings and calculate discount and cashback
-		// BUG-S1 FIX: Read earning_percent from settings instead of hardcoded 0.04
-		const loyaltySettings = await getLoyaltySettings();
+		// 8. Calculate discount and cashback using settings fetched earlier (line 327)
 		const earningPercent = loyaltySettings.earning_percent / 100; // Convert 4.0 to 0.04
 		const discountAmount = pointsToRedeem;
 		const finalAmount = purchaseAmount - discountAmount;

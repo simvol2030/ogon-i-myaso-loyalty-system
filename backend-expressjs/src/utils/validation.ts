@@ -222,11 +222,13 @@ export function validatePurchaseAmount(amount: number | null | undefined): Valid
 
 /**
  * Validates points to redeem
+ * @param maxDiscountPercent - Maximum discount percentage from loyalty settings (e.g., 20 for 20%)
  */
 export function validatePointsToRedeem(
 	points: number | null | undefined,
 	customerBalance: number,
-	purchaseAmount: number
+	purchaseAmount: number,
+	maxDiscountPercent: number
 ): ValidationResult {
 	if (points === null || points === undefined) {
 		return { valid: false, error: 'Количество баллов обязательно' };
@@ -244,12 +246,12 @@ export function validatePointsToRedeem(
 		return { valid: false, error: `Недостаточно баллов. Доступно: ${customerBalance}` };
 	}
 
-	// Check 20% discount limit (1 point = 1 ruble)
-	const maxDiscount = purchaseAmount * 0.2;
+	// Check max discount limit from settings (1 point = 1 ruble)
+	const maxDiscount = purchaseAmount * (maxDiscountPercent / 100);
 	if (points > maxDiscount) {
 		return {
 			valid: false,
-			error: `Скидка не может превышать 20% от покупки. Максимум: ${Math.floor(maxDiscount)} баллов`
+			error: `Скидка не может превышать ${maxDiscountPercent}% от покупки. Максимум: ${Math.floor(maxDiscount)} баллов`
 		};
 	}
 

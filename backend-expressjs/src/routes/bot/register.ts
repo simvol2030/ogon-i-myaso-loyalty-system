@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { db } from '../../db/client';
 import { loyaltyUsers, loyaltySettings } from '../../db/schema';
 import { eq } from 'drizzle-orm';
+import { generateUniqueCardNumber } from '../../utils/cardNumber';
 
 const router = Router();
 
@@ -70,30 +71,12 @@ router.post('/register', async (req, res) => {
 
 		const welcomeBonus = settings?.welcome_bonus || 500.0;
 
-		// Сгенерировать уникальный номер карты (6 цифр)
-		let cardNumber = '';
-		let isUnique = false;
-		let attempts = 0;
-		const maxAttempts = 100;
-
-		while (!isUnique && attempts < maxAttempts) {
-			// Генерируем случайный 6-значный номер
-			cardNumber = Math.floor(100000 + Math.random() * 900000).toString();
-
-			// Проверяем уникальность
-			const existingCard = await db.query.loyaltyUsers.findFirst({
-				where: eq(loyaltyUsers.card_number, cardNumber)
-			});
-
-			if (!existingCard) {
-				isUnique = true;
-			}
-
-			attempts++;
-		}
-
-		if (!isUnique) {
-			console.error('[BOT API] Failed to generate unique card number after 100 attempts');
+		// Сгенерировать уникальный номер карты (preferred: последние 6 цифр telegram_user_id, fallback: random)
+		let cardNumber: string;
+		try {
+			cardNumber = await generateUniqueCardNumber(telegramUserId);
+		} catch (error) {
+			console.error('[BOT API] Failed to generate unique card number:', error);
 			return res.status(500).json({
 				success: false,
 				error: 'Failed to generate unique card number. Please try again.'
