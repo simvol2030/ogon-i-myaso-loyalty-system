@@ -137,33 +137,38 @@
 				})
 			});
 
-			const data = await response.json();
-
-			if (response.ok) {
-				transactionResult = 'success';
-
-				// Используем данные с сервера для отображения
-				const serverCashback = data.transaction?.cashbackEarned || calculatedCashback;
-				const serverFinal = data.transaction?.finalAmount || calculatedFinalAmount;
-
-				if (type === 'spend') {
-					resultMessage = `Списано ${pointsToRedeem} ₽\nК оплате: ${serverFinal} ₽\nНачислено: +${serverCashback} ₽`;
-				} else {
-					resultMessage = `Начислено ${serverCashback} ₽\nК оплате: ${checkAmountNum} ₽`;
-				}
-
-				// Обновляем баланс клиента
-				if (data.transaction?.newBalance !== undefined) {
-					customer.current_balance = data.transaction.newBalance;
-				}
-			} else {
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({ error: 'Неизвестная ошибка' }));
+				console.error('Transaction failed:', response.status, errorData);
 				transactionResult = 'error';
-				resultMessage = data.error || data.message || 'Ошибка транзакции';
+				resultMessage = errorData.error || errorData.message || `Ошибка ${response.status}`;
+				return;
 			}
-		} catch (err) {
+
+			const data = await response.json();
+			console.log('Transaction success:', data);
+
+			transactionResult = 'success';
+
+			// Используем данные с сервера для отображения
+			const serverCashback = data.transaction?.cashbackEarned || calculatedCashback;
+			const serverFinal = data.transaction?.finalAmount || calculatedFinalAmount;
+
+			if (type === 'spend') {
+				resultMessage = `Списано ${pointsToRedeem} ₽\nК оплате: ${serverFinal} ₽\nНачислено: +${serverCashback} ₽`;
+			} else {
+				resultMessage = `Начислено ${serverCashback} ₽\nК оплате: ${checkAmountNum} ₽`;
+			}
+
+			// Обновляем баланс клиента
+			if (data.transaction?.newBalance !== undefined) {
+				customer.current_balance = data.transaction.newBalance;
+			}
+		} catch (err: any) {
 			console.error('Transaction error:', err);
+			console.error('Error stack:', err.stack);
 			transactionResult = 'error';
-			resultMessage = 'Ошибка соединения';
+			resultMessage = err.message || 'Ошибка соединения';
 		} finally {
 			isProcessing = false;
 		}
@@ -658,5 +663,37 @@
 
 	.new-transaction-btn:active {
 		transform: scale(0.98);
+	}
+
+	/* Mobile Responsive */
+	@media (max-width: 768px) {
+		.amount-input {
+			font-size: 24px;
+			text-align: center;
+		}
+
+		.currency {
+			font-size: 20px;
+		}
+
+		.option-btn {
+			padding: 16px;
+		}
+
+		.option-detail {
+			font-size: 13px;
+		}
+
+		.result-amount {
+			font-size: 18px;
+		}
+
+		.customer-name {
+			font-size: 20px;
+		}
+
+		.customer-balance .balance-value {
+			font-size: 22px;
+		}
 	}
 </style>

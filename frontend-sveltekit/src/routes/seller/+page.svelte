@@ -87,6 +87,22 @@
 		scannerError = '';
 
 		try {
+			// Проверяем и запрашиваем разрешение камеры (для PWA)
+			if (navigator.permissions) {
+				try {
+					const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+					console.log('Camera permission status:', permissionStatus.state);
+
+					if (permissionStatus.state === 'denied') {
+						scannerError = 'camera_permission';
+						return;
+					}
+				} catch (permErr) {
+					console.warn('Permissions API not supported:', permErr);
+				}
+			}
+
+			// Пробуем получить доступ к камере
 			scanner = new Html5Qrcode('qr-reader');
 
 			await scanner.start(
@@ -103,8 +119,16 @@
 			isScannerActive = true;
 		} catch (err: any) {
 			console.error('Scanner start error:', err);
-			if (err.message?.includes('Permission')) {
+			console.error('Error details:', {
+				message: err.message,
+				name: err.name,
+				stack: err.stack
+			});
+
+			if (err.message?.includes('Permission') || err.message?.includes('NotAllowedError')) {
 				scannerError = 'camera_permission';
+			} else if (err.message?.includes('NotFoundError')) {
+				scannerError = 'camera_not_found';
 			} else {
 				scannerError = 'camera_failed';
 			}
@@ -196,6 +220,18 @@
 		}
 	}
 
+	// Авто-поиск при вводе 6 цифр
+	function handleCardInput() {
+		if (cardNumber.length === 6 && /^\d{6}$/.test(cardNumber)) {
+			// Небольшая задержка для лучшего UX
+			setTimeout(() => {
+				if (cardNumber.length === 6) {
+					handleManualSearch();
+				}
+			}, 300);
+		}
+	}
+
 	function formatTime(dateStr: string): string {
 		const date = new Date(dateStr);
 		return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -220,10 +256,13 @@
 							<div class="scanner-error">
 								{#if scannerError === 'camera_permission'}
 									<p class="error-title">❌ Нет доступа к камере</p>
-									<p class="error-hint">💡 Установите приложение для работы камеры</p>
+									<p class="error-hint">💡 Разрешите доступ к камере в настройках браузера</p>
+								{:else if scannerError === 'camera_not_found'}
+									<p class="error-title">❌ Камера не найдена</p>
+									<p class="error-hint">💡 Используйте устройство с камерой</p>
 								{:else if scannerError === 'camera_failed'}
 									<p class="error-title">❌ Не удалось запустить камеру</p>
-									<p class="error-hint">💡 Установите приложение или используйте ввод вручную</p>
+									<p class="error-hint">💡 Попробуйте перезагрузить приложение или используйте ввод вручную</p>
 								{:else}
 									<p class="error-title">{scannerError}</p>
 								{/if}
@@ -258,6 +297,7 @@
 						maxlength="6"
 						placeholder="000000"
 						bind:value={cardNumber}
+						oninput={handleCardInput}
 						class="card-input"
 						onkeydown={(e) => e.key === 'Enter' && handleManualSearch()}
 					/>
@@ -642,5 +682,33 @@
 
 	.tx-amount.spend {
 		color: #f59e0b;
+	}
+
+	/* Mobile Responsive */
+	@media (max-width: 768px) {
+		.manual-input-section {
+			padding: 16px;
+		}
+
+		.input-group {
+			width: 100%;
+			max-width: 100%;
+		}
+
+		.card-input {
+			font-size: 18px;
+			min-width: 0;
+			flex: 1;
+		}
+
+		.search-btn {
+			min-width: 60px;
+			font-size: 20px;
+		}
+
+		.toggle-input-btn {
+			font-size: 14px;
+			padding: 12px 20px;
+		}
 	}
 </style>
