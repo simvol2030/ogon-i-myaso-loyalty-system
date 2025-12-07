@@ -51,6 +51,16 @@ interface APIResponse {
 	error?: string;
 }
 
+interface RegistrationResponse {
+	success: boolean;
+	data?: {
+		user: any;
+		welcomeBonus: number;
+		alreadyRegistered: boolean;
+	};
+	error?: string;
+}
+
 // ===== ФУНКЦИИ ДЛЯ РАБОТЫ С API =====
 
 /**
@@ -93,7 +103,7 @@ async function registerUser(ctx: any): Promise<any> {
 			})
 		});
 
-		const json = await response.json();
+		const json = await response.json() as RegistrationResponse;
 
 		if (!json.success) {
 			console.error('Failed to register user:', json.error);
