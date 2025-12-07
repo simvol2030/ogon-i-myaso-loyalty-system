@@ -41,6 +41,7 @@
   let currentCardNumber = $state(data.user.cardNumber);
   let currentBalance = $state(data.user.balance);
   let currentUserId = $state(data.user.id || 1);
+  let pointsName = $state('баллов'); // Default fallback
 
   function openMenu() {
     menuOpen = true;
@@ -76,6 +77,7 @@
   // Set context so child components can access these functions
   setContext('openQRModal', openQRModal);
   setContext('updateUserData', updateUserData);
+  setContext('pointsName', () => pointsName); // Reactive getter for pointsName
 
   onMount(async () => {
     if (isLoyaltyApp) {
@@ -124,6 +126,20 @@
         console.error('[+layout] ❌ Stack:', error instanceof Error ? error.stack : 'No stack trace');
         // Don't block app load if initialization fails
       }
+
+      // Load loyalty settings (pointsName) from API
+      try {
+        const response = await fetch('/api/loyalty/settings');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data?.pointsName) {
+            pointsName = result.data.pointsName;
+            console.log('[+layout] ✅ Loaded pointsName:', pointsName);
+          }
+        }
+      } catch (error) {
+        console.warn('[+layout] ⚠️ Failed to load loyalty settings, using default pointsName:', error);
+      }
     }
   });
 </script>
@@ -156,6 +172,7 @@
         userId={currentUserId}
         cardNumber={currentCardNumber}
         balance={currentBalance}
+        pointsName={pointsName}
         open={qrModalOpen}
         onClose={closeQRModal}
       />

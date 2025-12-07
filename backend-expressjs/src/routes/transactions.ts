@@ -330,6 +330,7 @@ router.post('/', async (req: Request, res: Response) => {
 				const expiresAt = new Date(Date.now() + EXPIRY_SECONDS * 1000).toISOString();
 				tx.insert(pendingDiscounts).values({
 					store_id: storeId,
+					customer_card_number: customer.cardNumber || customerRecord.card_number, // ✅ FIX: TypeScript requires this field
 					transaction_id: spendTx.id, // ✅ Ссылка на transactions.id (spend record)
 					check_amount: checkAmount, // ✅ FIX: Required field for database schema
 					discount_amount: pointsToRedeem,

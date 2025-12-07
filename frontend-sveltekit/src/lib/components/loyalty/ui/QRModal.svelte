@@ -6,12 +6,13 @@
   interface Props {
     cardNumber: string;
     balance: number;
+    pointsName?: string; // Название бонусных баллов
     open: boolean;
     onClose: () => void;
     userId?: number; // Добавляем userId для генерации QR
   }
 
-  let { cardNumber, balance, open, onClose, userId = 1 }: Props = $props();
+  let { cardNumber, balance, pointsName = 'баллов', open, onClose, userId = 1 }: Props = $props();
 
   let qrCodeDataURL = $state<string>('');
   let isGenerating = $state(false);
@@ -106,7 +107,7 @@
       <div class="balance-info">
         <p>Ваш баланс</p>
         <div class="amount">{formatNumber(balance)}</div>
-        <p>Мурзи-коинов</p>
+        <p>{pointsName}</p>
       </div>
 
       <p style="color: var(--text-secondary); font-size: 13px; margin-top: 12px;">

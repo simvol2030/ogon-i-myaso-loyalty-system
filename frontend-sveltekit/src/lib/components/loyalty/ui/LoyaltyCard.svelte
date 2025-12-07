@@ -26,6 +26,7 @@
   let { user, loyaltyRules }: Props = $props();
   const openQRModal = getContext<() => void>('openQRModal');
   const updateUserData = getContext<(cardNumber: string, balance: number, userId?: number) => void>('updateUserData');
+  const getPointsName = getContext<() => string>('pointsName');
 
   // State for merged user data (Telegram + demo)
   let displayUser = $state<User>(user);
@@ -124,7 +125,7 @@
 
   <div class="balance">
     <div class="balance-amount">{formatNumber(displayUser.balance)}</div>
-    <div class="balance-label">Мурзи-коинов</div>
+    <div class="balance-label">{getPointsName()}</div>
   </div>
 
   <div class="loyalty-info">
