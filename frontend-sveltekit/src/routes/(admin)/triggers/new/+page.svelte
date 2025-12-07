@@ -201,7 +201,7 @@
 					<textarea
 						id="message"
 						bind:value={messageTemplate}
-						placeholder="Привет, {first_name}! Мы заметили, что вы давно не заходили..."
+						placeholder="Привет, &#123;first_name&#125;! Мы заметили, что вы давно не заходили..."
 						rows="5"
 					></textarea>
 				</div>
