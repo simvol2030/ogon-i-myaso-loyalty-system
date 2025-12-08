@@ -15,8 +15,23 @@
   let { children, data } = $props();
 
   // Check if current route is loyalty app (not admin routes or cashier)
-  // Note: All admin routes use (admin)/+layout@.svelte which resets layout inheritance
-  const isLoyaltyApp = $derived(!$page.url.pathname.startsWith('/feed-admin') &&
+  // Note: Admin routes use (admin)/+layout@.svelte but we still need to exclude them here
+  // to prevent root layout from rendering Header + BottomNav before admin layout takes over
+  const isLoyaltyApp = $derived(!$page.url.pathname.startsWith('/dashboard') &&
+                                !$page.url.pathname.startsWith('/clients') &&
+                                !$page.url.pathname.startsWith('/promotions') &&
+                                !$page.url.pathname.startsWith('/campaigns') &&
+                                !$page.url.pathname.startsWith('/triggers') &&
+                                !$page.url.pathname.startsWith('/products-admin') &&
+                                !$page.url.pathname.startsWith('/categories') &&
+                                !$page.url.pathname.startsWith('/orders') &&
+                                !$page.url.pathname.startsWith('/store-list') &&
+                                !$page.url.pathname.startsWith('/sellers') &&
+                                !$page.url.pathname.startsWith('/statistics') &&
+                                !$page.url.pathname.startsWith('/shop-settings') &&
+                                !$page.url.pathname.startsWith('/stories') &&
+                                !$page.url.pathname.startsWith('/settings') &&
+                                !$page.url.pathname.startsWith('/feed-admin') &&
                                 !$page.url.pathname.startsWith('/login') &&
                                 !$page.url.pathname.startsWith('/logout') &&
                                 !$page.url.pathname.startsWith('/cashier') &&
