@@ -3,10 +3,10 @@
 
   interface Props {
     transaction: Transaction;
-    isExample?: boolean; // Optional flag for styling example transactions differently
+    pointsName?: string; // Название бонусных баллов
   }
 
-  let { transaction, isExample = false }: Props = $props();
+  let { transaction, pointsName = 'баллов' }: Props = $props();
 </script>
 
 <div class="history-item">
@@ -17,7 +17,7 @@
     </div>
     <div class="history-right">
       <div class="history-amount" class:green={transaction.type === 'earn'} class:red={transaction.type === 'spend'}>
-        {transaction.type === 'earn' ? '+' : '-'}{transaction.amount} Мурзи-коинов
+        {transaction.type === 'earn' ? '+' : '-'}{transaction.amount} {pointsName}
       </div>
       <div class="history-spent">{transaction.spent}</div>
     </div>

@@ -3,14 +3,14 @@
 
   let { data } = $props();
 
-  // DEBUG: Log data structure to diagnose rendering issue
+  // Get pointsName from data
+  const pointsName = data?.pointsName || 'баллов';
+
+  // DEBUG: Log data structure
   $effect(() => {
     console.log('[history/+page.svelte] === DATA DEBUG ===');
-    console.log('[history/+page.svelte] data:', data);
-    console.log('[history/+page.svelte] data?.realHistory:', data?.realHistory);
     console.log('[history/+page.svelte] realHistory.length:', data?.realHistory?.length);
-    console.log('[history/+page.svelte] showExamples:', data?.showExamples);
-    console.log('[history/+page.svelte] exampleHistory.length:', data?.exampleHistory?.length);
+    console.log('[history/+page.svelte] pointsName:', pointsName);
   });
 </script>
 
@@ -24,31 +24,14 @@
   {#if data?.realHistory && data.realHistory.length > 0}
     <div class="history-list">
       {#each data.realHistory as transaction}
-        <HistoryItem {transaction} />
+        <HistoryItem {transaction} {pointsName} />
       {/each}
     </div>
-  {/if}
-
-  <!-- Example transactions divider and list -->
-  {#if data?.showExamples && data?.exampleHistory && data.exampleHistory.length > 0}
-    <div class="example-divider">
-      <div class="divider-line"></div>
-      <h3 class="example-header">💡 Пример истории операций</h3>
-      <div class="divider-line"></div>
-    </div>
-
-    <div class="history-list example-list">
-      {#each data.exampleHistory as transaction}
-        <HistoryItem {transaction} isExample={true} />
-      {/each}
-    </div>
-  {/if}
-
-  <!-- Empty state (shouldn't happen because of welcome bonus, but just in case) -->
-  {#if (!data?.realHistory || data.realHistory.length === 0) && (!data?.exampleHistory || data.exampleHistory.length === 0)}
+  {:else}
+    <!-- Empty state -->
     <div class="empty-state">
       <p>У вас пока нет операций</p>
-      <p class="empty-hint">Совершите первую покупку, чтобы начать копить Мурзи-коины!</p>
+      <p class="empty-hint">Совершите первую покупку, чтобы начать копить {pointsName}!</p>
     </div>
   {/if}
 </section>
@@ -75,37 +58,6 @@
     gap: 6px;
   }
 
-  /* Example transactions styling */
-  .example-divider {
-    margin: 32px 0 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .divider-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      transparent,
-      var(--border-color),
-      transparent
-    );
-  }
-
-  .example-header {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    text-align: center;
-  }
-
-  .example-list {
-    opacity: 0.7;
-  }
-
   /* Empty state */
   .empty-state {
     text-align: center;
@@ -127,15 +79,6 @@
   @media (max-width: 480px) {
     .section-content {
       padding: 20px 12px 24px;
-    }
-
-    .example-divider {
-      margin: 24px 0 20px;
-      gap: 12px;
-    }
-
-    .example-header {
-      font-size: 14px;
     }
   }
 </style>

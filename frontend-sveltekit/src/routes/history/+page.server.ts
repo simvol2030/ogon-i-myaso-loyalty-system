@@ -1,8 +1,7 @@
 import { db } from '$lib/server/db/client';
-import { transactions, loyaltyUsers } from '$lib/server/db/schema';
+import { transactions, loyaltyUsers, loyaltySettings } from '$lib/server/db/schema';
 import { desc, eq, gte, and } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
-import { EXAMPLE_TRANSACTIONS } from '$lib/data/loyalty/history_examples';
 import { getRetentionCutoffDate, getRetentionDays } from '$lib/utils/retention';
 
 /**
@@ -12,22 +11,30 @@ import { getRetentionCutoffDate, getRetentionDays } from '$lib/utils/retention';
  * 1. Get telegram_user_id from cookie (set by /api/telegram/init)
  * 2. JOIN with loyalty_users to get loyalty_user.id
  * 3. Load real transactions for this user from database
- * 4. Show examples ONLY if user has <5 transactions OR no 'spend' transactions yet
- *
- * Hiding examples criteria:
- * - User has >= 5 transactions AND at least one 'spend' transaction
+ * 4. Load pointsName from loyalty settings
+ * 5. Return clean history without demo transactions
  */
 export const load: PageServerLoad = async ({ cookies }) => {
 	// Get telegram_user_id from cookie (set by /api/telegram/init)
 	const telegramUserIdStr = cookies.get('telegram_user_id');
 
+	// Load pointsName from settings
+	let pointsName = 'баллов'; // Default fallback
+	try {
+		const settings = await db.select().from(loyaltySettings).limit(1).get();
+		if (settings?.pointsName) {
+			pointsName = settings.pointsName;
+			console.log('[history/+page.server.ts] ✅ Loaded pointsName:', pointsName);
+		}
+	} catch (error) {
+		console.warn('[history/+page.server.ts] ⚠️ Failed to load pointsName, using default:', error);
+	}
+
 	if (!telegramUserIdStr) {
 		console.warn('[history/+page.server.ts] No telegram_user_id cookie found');
-		// Return only examples for demo mode
 		return {
 			realHistory: [],
-			exampleHistory: EXAMPLE_TRANSACTIONS,
-			showExamples: true
+			pointsName
 		};
 	}
 
@@ -37,8 +44,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		console.error('[history/+page.server.ts] Invalid telegram_user_id:', telegramUserIdStr);
 		return {
 			realHistory: [],
-			exampleHistory: EXAMPLE_TRANSACTIONS,
-			showExamples: true
+			pointsName
 		};
 	}
 
@@ -89,22 +95,15 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		storeName: tx.store_name || undefined
 	}));
 
-	// Determine if we should show examples
-	// Show examples if:
-	// - User has < 5 transactions OR
-	// - User has no 'spend' transactions yet
-	const hasSpendTransaction = realHistory.some((tx) => tx.type === 'spend');
-	const showExamples = realHistory.length < 5 || !hasSpendTransaction;
-
-	console.log('[history/+page.server.ts] Show examples:', showExamples, {
+	// ✅ Return clean history without demo transactions
+	console.log('[history/+page.server.ts] Returning clean history:', {
 		count: realHistory.length,
-		hasSpend: hasSpendTransaction
+		pointsName
 	});
 
 	return {
 		realHistory,
-		exampleHistory: showExamples ? EXAMPLE_TRANSACTIONS : [],
-		showExamples
+		pointsName
 	};
 };
 
