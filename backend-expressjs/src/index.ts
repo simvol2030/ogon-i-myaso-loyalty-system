@@ -19,6 +19,7 @@ import storesRouter from './routes/stores';
 import transactionsRouter from './routes/transactions';
 import contentRouter from './routes/content';
 import sellerRouter from './routes/seller';
+import feedRouter from './routes/feed'; // Feed public API
 
 // Public API routes
 import loyaltyRouter from './routes/api/loyalty';
@@ -49,6 +50,7 @@ import adminCategoriesRouter from './routes/admin/categories'; // Shop extension
 import adminOrdersRouter from './routes/admin/orders'; // Shop extension: Orders management
 import adminShopSettingsRouter from './routes/admin/shop-settings'; // Shop extension: Shop settings
 import adminWelcomeMessagesRouter from './routes/admin/welcome-messages'; // Welcome messages for Telegram bot
+import adminFeedRouter from './routes/admin/feed'; // Feed admin API
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000');
@@ -102,7 +104,8 @@ app.get('/', (req, res) => {
 			stores: '/api/stores',
 			transactions: '/api/transactions',
 			'1c-integration': '/api/1c',
-			content: '/api/content'
+			content: '/api/content',
+			feed: '/api/feed'
 		}
 	});
 });
@@ -125,6 +128,7 @@ app.use('/api/seller', sellerRouter); // Seller PWA authentication
 app.use('/api/catalog', catalogRouter); // Public catalog (categories & products)
 app.use('/api/cart', cartRouter); // Shopping cart
 app.use('/api/orders', ordersRouter); // Orders
+app.use('/api/feed', feedRouter); // Feed/Лента public API
 
 // Bot API routes (public, no auth required)
 app.use('/api/bot/welcome-messages', botWelcomeMessagesRouter); // Welcome messages for bot
@@ -147,6 +151,7 @@ app.use('/api/admin/categories', adminCategoriesRouter); // Shop extension: Cate
 app.use('/api/admin/orders', adminOrdersRouter); // Shop extension: Orders management
 app.use('/api/admin/shop-settings', adminShopSettingsRouter); // Shop extension: Shop settings
 app.use('/api/admin/welcome-messages', adminWelcomeMessagesRouter); // Welcome messages for bot
+app.use('/api/admin/feed', adminFeedRouter); // Feed/Лента admin API
 
 // Обработка 404
 app.use((req, res) => {
