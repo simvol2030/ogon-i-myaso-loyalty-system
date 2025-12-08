@@ -141,8 +141,17 @@ export const appSlogan = derived(customization, $c => $c.appSlogan);
 export const logoUrl = derived(customization, $c => $c.logoUrl);
 export const colors = derived(customization, $c => $c.colors);
 export const darkTheme = derived(customization, $c => $c.darkTheme);
-export const bottomNavItems = derived(customization, $c => $c.navigation.bottomNav.filter(item => item.visible));
-export const sidebarMenuItems = derived(customization, $c => $c.navigation.sidebarMenu.filter(item => item.visible));
+export const bottomNavItems = derived(customization, $c =>
+	$c.navigation.bottomNav.filter(item => item.visible).map(item =>
+		item.id === 'products' ? { ...item, label: $c.productsLabel } : item
+	)
+);
+export const sidebarMenuItems = derived(customization, $c =>
+	$c.navigation.sidebarMenu.filter(item => item.visible).map(item =>
+		item.id === 'products' ? { ...item, label: $c.productsLabel } : item
+	)
+);
+export const productsLabel = derived(customization, $c => $c.productsLabel);
 // BUG-3 FIX: Add fallback for loyaltyCard if undefined (defensive programming)
 export const loyaltyCardSettings = derived(customization, $c => $c.loyaltyCard || defaultCustomization.loyaltyCard);
 
