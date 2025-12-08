@@ -510,3 +510,118 @@ export type NewShopSettings = typeof shopSettings.$inferInsert;
 
 export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
 export type NewOrderStatusHistory = typeof orderStatusHistory.$inferInsert;
+
+// ============================================
+// FEED TABLES - News/Promo feed
+// ============================================
+
+/**
+ * Feed Tags table - теги для постов и статей
+ */
+export const feedTags = sqliteTable('feed_tags', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	name: text('name').notNull(),
+	slug: text('slug').notNull().unique(), // URL-friendly версия
+	color: text('color').notNull().default('#ff6b00'), // Цвет бейджа тега
+	sort_order: integer('sort_order').notNull().default(0),
+	is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+	slugIdx: index('idx_feed_tags_slug').on(table.slug),
+	activeOrderIdx: index('idx_feed_tags_active_order').on(table.is_active, table.sort_order)
+}));
+
+/**
+ * Feed Posts table - посты и статьи ленты
+ * type: 'post' - короткий пост с фото
+ * type: 'article' - длинная статья с markdown
+ */
+export const feedPosts = sqliteTable('feed_posts', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	type: text('type', { enum: ['post', 'article'] }).notNull().default('post'),
+	title: text('title'), // Для статей обязателен, для постов опционален
+	content: text('content').notNull(), // Markdown контент
+	excerpt: text('excerpt'), // Сниппет для статей в ленте (150-200 символов)
+	author_name: text('author_name'), // Имя автора (опционально)
+	is_published: integer('is_published', { mode: 'boolean' }).notNull().default(false),
+	published_at: text('published_at'), // Дата публикации для хронологии
+	views_count: integer('views_count').notNull().default(0),
+	likes_count: integer('likes_count').notNull().default(0), // Агрегированный счётчик
+	dislikes_count: integer('dislikes_count').notNull().default(0), // Агрегированный счётчик
+	is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+	updated_at: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+	publishedAtIdx: index('idx_feed_posts_published').on(table.is_published, table.published_at),
+	typePublishedIdx: index('idx_feed_posts_type_published').on(table.type, table.is_published, table.published_at)
+}));
+
+/**
+ * Feed Post Images table - изображения для постов/статей
+ * Для постов: используется как слайдер (sort_order)
+ * Для статей: position_in_content указывает место в тексте
+ */
+export const feedPostImages = sqliteTable('feed_post_images', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	post_id: integer('post_id')
+		.notNull()
+		.references(() => feedPosts.id, { onDelete: 'cascade' }),
+	filename: text('filename').notNull(), // WebP файл
+	original_name: text('original_name').notNull(),
+	alt_text: text('alt_text'), // Описание для accessibility
+	position_in_content: integer('position_in_content'), // Позиция маркера в статье (null = слайдер поста)
+	sort_order: integer('sort_order').notNull().default(0),
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+	postIdIdx: index('idx_feed_post_images_post').on(table.post_id),
+	postSortIdx: index('idx_feed_post_images_sort').on(table.post_id, table.sort_order)
+}));
+
+/**
+ * Feed Post Tags table - связь постов и тегов (многие-ко-многим)
+ */
+export const feedPostTags = sqliteTable('feed_post_tags', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	post_id: integer('post_id')
+		.notNull()
+		.references(() => feedPosts.id, { onDelete: 'cascade' }),
+	tag_id: integer('tag_id')
+		.notNull()
+		.references(() => feedTags.id, { onDelete: 'cascade' })
+}, (table) => ({
+	postIdIdx: index('idx_feed_post_tags_post').on(table.post_id),
+	tagIdIdx: index('idx_feed_post_tags_tag').on(table.tag_id),
+	uniqueIdx: index('idx_feed_post_tags_unique').on(table.post_id, table.tag_id)
+}));
+
+/**
+ * Feed Post Reactions table - лайки/дизлайки от пользователей Telegram
+ */
+export const feedPostReactions = sqliteTable('feed_post_reactions', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	post_id: integer('post_id')
+		.notNull()
+		.references(() => feedPosts.id, { onDelete: 'cascade' }),
+	telegram_user_id: text('telegram_user_id').notNull(), // ID пользователя из Telegram WebApp
+	reaction_type: text('reaction_type', { enum: ['like', 'dislike'] }).notNull(),
+	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+	postUserIdx: index('idx_feed_reactions_post_user').on(table.post_id, table.telegram_user_id),
+	postIdx: index('idx_feed_reactions_post').on(table.post_id)
+}));
+
+// Feed TypeScript типы
+export type FeedTag = typeof feedTags.$inferSelect;
+export type NewFeedTag = typeof feedTags.$inferInsert;
+
+export type FeedPost = typeof feedPosts.$inferSelect;
+export type NewFeedPost = typeof feedPosts.$inferInsert;
+
+export type FeedPostImage = typeof feedPostImages.$inferSelect;
+export type NewFeedPostImage = typeof feedPostImages.$inferInsert;
+
+export type FeedPostTag = typeof feedPostTags.$inferSelect;
+export type NewFeedPostTag = typeof feedPostTags.$inferInsert;
+
+export type FeedPostReaction = typeof feedPostReactions.$inferSelect;
+export type NewFeedPostReaction = typeof feedPostReactions.$inferInsert;
