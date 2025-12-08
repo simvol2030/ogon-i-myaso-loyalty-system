@@ -1,6 +1,7 @@
 import { type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { randomBytes } from 'crypto';
+import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 /**
  * Security Headers Hook
@@ -149,10 +150,57 @@ const requestLogger: Handle = async ({ event, resolve }) => {
 };
 
 /**
+ * Admin API Proxy Hook
+ * Proxies all /api/admin requests to Express backend in production
+ * (In dev mode, Vite proxy handles this)
+ */
+const proxyAdminAPI: Handle = async ({ event, resolve }) => {
+	// Only proxy /api/admin requests
+	if (event.url.pathname.startsWith('/api/admin')) {
+		const backendUrl = PUBLIC_BACKEND_URL || 'http://localhost:3007';
+		const targetUrl = `${backendUrl}${event.url.pathname}${event.url.search}`;
+
+		// Forward all headers including cookies
+		const headers = new Headers();
+		event.request.headers.forEach((value, key) => {
+			headers.set(key, value);
+		});
+
+		// Forward request to Express backend
+		try {
+			const response = await fetch(targetUrl, {
+				method: event.request.method,
+				headers,
+				body: event.request.method !== 'GET' && event.request.method !== 'HEAD'
+					? await event.request.arrayBuffer()
+					: undefined,
+				duplex: 'half'
+			} as RequestInit);
+
+			// Return backend response
+			return new Response(response.body, {
+				status: response.status,
+				statusText: response.statusText,
+				headers: response.headers
+			});
+		} catch (error) {
+			console.error(`[PROXY] Failed to proxy ${event.url.pathname}:`, error);
+			return new Response(JSON.stringify({ success: false, error: 'Backend unavailable' }), {
+				status: 503,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+	}
+
+	return resolve(event);
+};
+
+/**
  * Комбинируем все hooks в правильном порядке
  */
 export const handle = sequence(
 	requestLogger,      // 1. Логирование (первым, чтобы замерить всё)
-	securityHeaders,    // 2. Security headers (рано, чтобы защитить всё)
-	csrfProtection      // 3. CSRF защита (после headers)
+	proxyAdminAPI,      // 2. Proxy /api/admin requests to Express backend (до security checks)
+	securityHeaders,    // 3. Security headers (рано, чтобы защитить всё)
+	csrfProtection      // 4. CSRF защита (после headers)
 );
