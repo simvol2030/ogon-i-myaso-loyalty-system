@@ -16,8 +16,13 @@ import {
 	storiesSettings,
 	storiesViews
 } from '../../db/schema';
+import { authenticateSession, requireRole } from '../../middleware/session-auth';
 
 const router = Router();
+
+// Apply authentication to all routes
+router.use(authenticateSession);
+router.use(requireRole('super-admin', 'editor'));
 
 // =====================================================
 // UPLOAD CONFIGURATION
