@@ -752,6 +752,9 @@ export const appCustomization = sqliteTable('app_customization', {
 		{ id: 'profile', href: '/profile', label: 'Профиль', icon: '👤', visible: true, isExternal: false }
 	])),
 
+	// === КАСТОМИЗАЦИЯ ЛЕЙБЛОВ ===
+	products_label: text('products_label').notNull().default('Товары'),  // Название раздела товаров (Меню, Товары, Магазин)
+
 	// === ВИДЖЕТ ЛОЯЛЬНОСТИ (карточка баланса) ===
 	loyalty_card_gradient_start: text('loyalty_card_gradient_start').notNull().default('#ff6b00'),  // Начало градиента
 	loyalty_card_gradient_end: text('loyalty_card_gradient_end').notNull().default('#dc2626'),     // Конец градиента

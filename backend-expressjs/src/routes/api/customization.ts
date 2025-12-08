@@ -99,7 +99,10 @@ router.get('/', async (req, res) => {
 				badgeText: s.loyalty_card_badge_text,
 				borderRadius: s.loyalty_card_border_radius,
 				showShimmer: Boolean(s.loyalty_card_show_shimmer)
-			}
+			},
+
+			// Customizable Labels
+			productsLabel: s.products_label
 		};
 
 		// Update cache
