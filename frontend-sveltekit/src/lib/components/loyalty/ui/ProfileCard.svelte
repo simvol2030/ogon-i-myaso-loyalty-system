@@ -45,20 +45,18 @@
     }
 
     try {
-      console.log('[ProfileCard] 🔄 Retry: Calling initializeUser() with pre-fetched user...');
       const result = await initializeUser(undefined, telegramUser);
 
       if (result && result.success) {
         displayUser = { ...displayUser, balance: result.user.current_balance };
         registrationError = null;
         retryCount = 0;  // Reset on success
-        console.log('[ProfileCard] ✅ Retry successful, balance:', result.user.current_balance);
       } else {
-        registrationError = `Ошибка регистрации. Попытка ${retryCount}/${MAX_RETRIES}`;
+        registrationError = `Ошибка загрузки. Попытка ${retryCount}/${MAX_RETRIES}`;
       }
     } catch (error) {
       registrationError = `Ошибка сервера. Попытка ${retryCount}/${MAX_RETRIES}`;
-      console.error('[ProfileCard] ❌ Retry failed:', error);
+      console.error('[ProfileCard] Retry failed:', error);
     } finally {
       isRegistering = false;
     }
@@ -66,18 +64,12 @@
 
   // Initialize Telegram user on mount
   onMount(async () => {
-    console.log('[ProfileCard] Mounting component...');
-
     const telegramUser = await waitForTelegramUser(5000);
-    console.log('[ProfileCard] Telegram user from SDK:', telegramUser);
 
     // If running in Telegram Web App, initialize user
     if (telegramUser) {
-      console.log('[ProfileCard] Running in Telegram Web App mode');
-
       // STEP 1: Update UI IMMEDIATELY (synchronous)
       const newName = `${telegramUser.first_name}${telegramUser.last_name ? ' ' + telegramUser.last_name : ''}`.trim();
-      console.log('[ProfileCard] ⚡ INSTANT UPDATE: Setting name to:', newName);
 
       displayUser = {
         ...user,
@@ -88,54 +80,34 @@
 
       isLoading = false;
 
-      // STEP 2: Register user in background (with error handling)
+      // STEP 2: Load balance in background (with error handling)
       isRegistering = true;
       try {
-        console.log('[ProfileCard] 📡 Background: Calling initializeUser() with pre-fetched user...');
         const result = await initializeUser(undefined, telegramUser);
-        console.log('[ProfileCard] 📡 Background: initializeUser() result:', result);
-        console.log('[ProfileCard] 📡 Result type:', typeof result);
-        console.log('[ProfileCard] 📡 Result keys:', result ? Object.keys(result) : 'null');
 
         if (result && result.success) {
-          console.log('[ProfileCard] 💰 Updating balance from API:', result.user.current_balance);
-
           displayUser = {
             ...displayUser,
             balance: result.user.current_balance,
           };
-
           registrationError = null;  // Clear error on success
-
-          console.log('[ProfileCard] ✅ Telegram user registered:', {
-            isNewUser: result.isNewUser,
-            bonus: result.isNewUser ? '500 Murzikoyns awarded' : 'Welcome back',
-            displayUserName: displayUser.name,
-            displayUserBalance: displayUser.balance
-          });
         } else {
-          // Show detailed error
-          const errorDetail = !result ? 'API returned null' : `success=${result.success}`;
-          registrationError = `Не удалось зарегистрировать аккаунт (${errorDetail}). Попробуйте перезапустить приложение.`;
-          console.warn('[ProfileCard] ⚠️ API failed:', errorDetail);
-          console.warn('[ProfileCard] ⚠️ Full result:', JSON.stringify(result));
+          // Show error to user
+          registrationError = 'Не удалось загрузить данные. Попробуйте перезапустить приложение.';
+          console.error('[ProfileCard] Failed to initialize user:', result);
         }
       } catch (error) {
         // Show error to user
         registrationError = 'Ошибка подключения к серверу. Проверьте интернет и перезапустите приложение.';
-        console.error('[ProfileCard] ❌ Background API failed:', error);
-        console.error('[ProfileCard] ❌ Error details:', error instanceof Error ? error.message : String(error));
+        console.error('[ProfileCard] API error:', error);
       } finally {
         isRegistering = false;
       }
     } else {
       // Not in Telegram Web App - use demo user
-      console.log('[ProfileCard] Demo mode: Not running in Telegram Web App');
       displayUser = user;
       isLoading = false;
     }
-
-    console.log('[ProfileCard] Mount complete. Final displayUser:', displayUser.name);
   });
 </script>
 
@@ -161,13 +133,6 @@
           {isRegistering ? 'Повтор...' : 'Повторить'}
         </button>
       {/if}
-    </div>
-  {/if}
-
-  {#if isRegistering}
-    <div class="registration-progress">
-      <span class="spinner"></span>
-      <span>Регистрация...</span>
     </div>
   {/if}
 
@@ -278,31 +243,6 @@
   .retry-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-
-  .registration-progress {
-    background: #ffd;
-    padding: 8px 12px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: #660;
-  }
-
-  .spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid #cc0;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
 
   .profile-header {
