@@ -29,6 +29,23 @@
 	let videoElement = $state<HTMLVideoElement | null>(null);
 	let viewStartTime = $state(Date.now());
 
+	// Gesture detection state
+	let touchStartX = $state(0);
+	let touchStartY = $state(0);
+	let touchEndX = $state(0);
+	let touchEndY = $state(0);
+	let touchStartTime = $state(0);
+	let isDragging = $state(false);
+	let swipeDirection = $state<'none' | 'left' | 'right' | 'up' | 'down'>('none');
+	let isTransitioning = $state(false);
+
+	// Gesture detection thresholds
+	const SWIPE_THRESHOLD_HORIZONTAL = 50; // Minimum horizontal swipe distance (px)
+	const SWIPE_THRESHOLD_VERTICAL = 80; // Minimum vertical swipe distance (px)
+	const SWIPE_VELOCITY_MIN = 0.3; // Minimum swipe velocity (px/ms)
+	const TAP_MAX_DISTANCE = 10; // Maximum movement for tap (px)
+	const TAP_MAX_DURATION = 300; // Maximum duration for tap (ms)
+
 	// Computed
 	let currentHighlight = $derived(highlights[activeHighlightIndex]);
 	let currentItem = $derived(currentHighlight?.items[currentItemIndex]);
@@ -126,23 +143,147 @@
 		window.open(currentItem.linkUrl, '_blank');
 	}
 
-	function handleTouchStart(e: TouchEvent | MouseEvent) {
-		paused = true;
+	// Gesture detection functions
+	function handleGestureStart(e: MouseEvent | TouchEvent) {
+		if (isTransitioning) return;
+
+		paused = true; // Pause video during interaction
+		isDragging = true;
+		touchStartTime = Date.now();
+
+		if ('touches' in e) {
+			touchStartX = e.touches[0].clientX;
+			touchStartY = e.touches[0].clientY;
+		} else {
+			touchStartX = e.clientX;
+			touchStartY = e.clientY;
+		}
+
+		touchEndX = touchStartX;
+		touchEndY = touchStartY;
+		swipeDirection = 'none';
 	}
 
-	function handleTouchEnd(e: TouchEvent | MouseEvent) {
-		paused = false;
+	function handleGestureMove(e: MouseEvent | TouchEvent) {
+		if (!isDragging) return;
+
+		if ('touches' in e) {
+			touchEndX = e.touches[0].clientX;
+			touchEndY = e.touches[0].clientY;
+		} else {
+			touchEndX = e.clientX;
+			touchEndY = e.clientY;
+		}
+
+		// Calculate swipe direction (for visual feedback if needed)
+		const deltaX = touchEndX - touchStartX;
+		const deltaY = touchEndY - touchStartY;
+
+		if (Math.abs(deltaY) > Math.abs(deltaX)) {
+			swipeDirection = deltaY < 0 ? 'up' : 'down';
+		} else {
+			swipeDirection = deltaX < 0 ? 'left' : 'right';
+		}
 	}
 
-	function handleTap(e: MouseEvent | TouchEvent) {
+	function handleGestureEnd(e: MouseEvent | TouchEvent) {
+		if (!isDragging) return;
+
+		isDragging = false;
+		paused = false; // Resume video
+
+		const deltaX = touchEndX - touchStartX;
+		const deltaY = touchEndY - touchStartY;
+		const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+		const duration = Date.now() - touchStartTime;
+		const velocity = distance / duration;
+
+		// Priority 1: Vertical swipe (close viewer)
+		if (Math.abs(deltaY) > SWIPE_THRESHOLD_VERTICAL && Math.abs(deltaY) > Math.abs(deltaX)) {
+			if (deltaY > 0) {
+				handleVerticalSwipe();
+				return;
+			}
+		}
+
+		// Priority 2: Horizontal swipe (change highlight)
+		if (Math.abs(deltaX) > SWIPE_THRESHOLD_HORIZONTAL && velocity > SWIPE_VELOCITY_MIN) {
+			handleHorizontalSwipe(deltaX < 0 ? 'left' : 'right');
+			return;
+		}
+
+		// Priority 3: Tap (change story item)
+		if (distance < TAP_MAX_DISTANCE && duration < TAP_MAX_DURATION) {
+			handleTapGesture(e);
+			return;
+		}
+
+		// No gesture detected, just resume
+		swipeDirection = 'none';
+	}
+
+	// Gesture action handlers
+	function handleVerticalSwipe() {
+		isTransitioning = true;
+		swipeDirection = 'down';
+
+		// Add slide-down animation class to viewer-container
+		// After animation completes, call onClose()
+		setTimeout(() => {
+			onClose();
+			isTransitioning = false;
+			swipeDirection = 'none';
+		}, 300);
+	}
+
+	function handleHorizontalSwipe(direction: 'left' | 'right') {
+		if (isTransitioning) return;
+
+		const isFirstHighlight = activeHighlightIndex === 0;
+		const isLastHighlight = activeHighlightIndex === highlights.length - 1;
+
+		if (direction === 'left' && !isLastHighlight) {
+			// Swipe left = next highlight
+			isTransitioning = true;
+			swipeDirection = 'left';
+
+			setTimeout(() => {
+				onNext();
+				isTransitioning = false;
+				swipeDirection = 'none';
+			}, 300);
+		} else if (direction === 'right' && !isFirstHighlight) {
+			// Swipe right = previous highlight
+			isTransitioning = true;
+			swipeDirection = 'right';
+
+			setTimeout(() => {
+				onPrev();
+				isTransitioning = false;
+				swipeDirection = 'none';
+			}, 300);
+		} else {
+			// Edge case: bounce animation
+			isTransitioning = true;
+			swipeDirection = direction;
+
+			setTimeout(() => {
+				isTransitioning = false;
+				swipeDirection = 'none';
+			}, 400);
+		}
+	}
+
+	function handleTapGesture(e: MouseEvent | TouchEvent) {
+		// Preserve existing tap logic
 		const target = e.currentTarget as HTMLElement;
 		const rect = target.getBoundingClientRect();
 
 		let clientX: number;
-		if ('touches' in e) {
+		if ('changedTouches' in e) {
 			clientX = e.changedTouches[0].clientX;
 		} else {
-			clientX = e.clientX;
+			clientX = touchEndX; // Use stored position from gesture tracking
 		}
 
 		const tapPosition = (clientX - rect.left) / rect.width;
@@ -244,13 +385,20 @@
 		<!-- Content -->
 		<div
 			class="viewer-content"
+			class:transitioning={isTransitioning}
+			class:swipe-left={swipeDirection === 'left'}
+			class:swipe-right={swipeDirection === 'right'}
+			class:swipe-down={swipeDirection === 'down'}
 			role="button"
 			tabindex="0"
-			onmousedown={handleTouchStart}
-			onmouseup={handleTouchEnd}
-			ontouchstart={handleTouchStart}
-			ontouchend={handleTouchEnd}
-			onclick={handleTap}
+			onmousedown={handleGestureStart}
+			onmousemove={handleGestureMove}
+			onmouseup={handleGestureEnd}
+			onmouseleave={handleGestureEnd}
+			ontouchstart={handleGestureStart}
+			ontouchmove={handleGestureMove}
+			ontouchend={handleGestureEnd}
+			ontouchcancel={handleGestureEnd}
 		>
 			{#if currentItem}
 				{#if currentItem.type === 'photo'}
@@ -547,5 +695,88 @@
 
 	.highlight-dot:hover {
 		background: rgba(255, 255, 255, 0.7);
+	}
+
+	/* Gesture animations */
+	.viewer-container {
+		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	/* Swipe left animation */
+	.viewer-content.swipe-left {
+		animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+
+	@keyframes slideOutLeft {
+		from {
+			transform: translateX(0);
+			opacity: 1;
+		}
+		to {
+			transform: translateX(-100%);
+			opacity: 0;
+		}
+	}
+
+	/* Swipe right animation */
+	.viewer-content.swipe-right {
+		animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+
+	@keyframes slideOutRight {
+		from {
+			transform: translateX(0);
+			opacity: 1;
+		}
+		to {
+			transform: translateX(100%);
+			opacity: 0;
+		}
+	}
+
+	/* Swipe down to close animation */
+	.viewer-content.swipe-down {
+		animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+
+	@keyframes slideDown {
+		from {
+			transform: translateY(0);
+			opacity: 1;
+		}
+		to {
+			transform: translateY(100%);
+			opacity: 0;
+		}
+	}
+
+	/* Bounce animation for edge cases */
+	.viewer-content.transitioning.swipe-left:not(.swipe-down),
+	.viewer-content.transitioning.swipe-right:not(.swipe-down) {
+		animation: bounce 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+	}
+
+	@keyframes bounce {
+		0%,
+		100% {
+			transform: translateX(0);
+		}
+		50% {
+			transform: translateX(var(--bounce-offset, 20px));
+		}
+	}
+
+	/* Apply correct bounce direction */
+	.viewer-content.swipe-left {
+		--bounce-offset: -20px;
+	}
+
+	.viewer-content.swipe-right {
+		--bounce-offset: 20px;
+	}
+
+	/* Disable pointer events during transition */
+	.viewer-content.transitioning {
+		pointer-events: none;
 	}
 </style>
