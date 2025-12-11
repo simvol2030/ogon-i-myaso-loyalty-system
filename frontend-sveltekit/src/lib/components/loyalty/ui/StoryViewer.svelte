@@ -110,13 +110,14 @@
 	function startProgress() {
 		progress = 0;
 		viewStartTime = Date.now();
+		actualVideoDuration = 0; // Reset for new item
 
 		if (progressInterval) {
 			clearInterval(progressInterval);
 			progressInterval = null;
 		}
 
-		// For videos, progress is tracked via timeupdate event
+		// For videos, progress is tracked via timeupdate event and ended event
 		// For photos, use interval timer
 		if (currentItem?.type !== 'video') {
 			progressInterval = setInterval(() => {
@@ -128,6 +129,8 @@
 				}
 			}, 50);
 		}
+		// For videos: progress updated by handleVideoTimeUpdate,
+		// transition by handleVideoEnded
 	}
 
 	function stopProgress() {
@@ -417,9 +420,13 @@
 		}
 	}
 
+	// Track previous highlight index to detect actual changes
+	let prevHighlightIndex = $state(-1);
+
 	// Reset item index when highlight changes
 	$effect(() => {
-		if (activeHighlightIndex >= 0) {
+		if (activeHighlightIndex >= 0 && activeHighlightIndex !== prevHighlightIndex) {
+			prevHighlightIndex = activeHighlightIndex;
 			currentItemIndex = 0;
 			startProgress();
 		}
@@ -440,15 +447,16 @@
 	function handleVideoLoadedMetadata() {
 		if (videoElement && isFinite(videoElement.duration)) {
 			actualVideoDuration = videoElement.duration;
-			// Restart progress with correct duration
-			startProgress();
+			// Don't call startProgress() here - it's already called when item changes
+			// Just update the duration for progress bar calculation
 		}
 	}
 
 	function handleVideoTimeUpdate() {
 		// Update progress based on actual video playback position
-		if (videoElement && actualVideoDuration > 0 && !paused) {
-			progress = (videoElement.currentTime / actualVideoDuration) * actualVideoDuration * 1000;
+		if (videoElement && videoElement.duration > 0 && !paused) {
+			// progress in milliseconds = currentTime in seconds * 1000
+			progress = videoElement.currentTime * 1000;
 		}
 	}
 
@@ -456,14 +464,6 @@
 		// Video finished playing, go to next item
 		goToNextItem();
 	}
-
-	// Reset video duration when item changes
-	$effect(() => {
-		if (currentItem) {
-			// Reset actual video duration when switching items
-			actualVideoDuration = 0;
-		}
-	});
 
 	onMount(() => {
 		window.addEventListener('keydown', handleKeydown);

@@ -246,7 +246,11 @@ export const uploadAPI = {
 				if (xhr.status >= 200 && xhr.status < 300) {
 					try {
 						const response = JSON.parse(xhr.responseText);
-						resolve(response);
+						if (response.success && response.data) {
+							resolve(response.data);
+						} else {
+							reject(new Error(response.error || 'Ошибка загрузки'));
+						}
 					} catch {
 						reject(new Error('Ошибка парсинга ответа сервера'));
 					}
