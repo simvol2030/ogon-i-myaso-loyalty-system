@@ -28,6 +28,7 @@
 	let paused = $state(false);
 	let videoElement = $state<HTMLVideoElement | null>(null);
 	let viewStartTime = $state(Date.now());
+	let viewerContainerEl = $state<HTMLElement | null>(null);
 
 	// Gesture detection state
 	let touchStartX = $state(0);
@@ -39,13 +40,21 @@
 	let swipeDirection = $state<'none' | 'left' | 'right' | 'up' | 'down'>('none');
 	let isTransitioning = $state(false);
 
-	// Gesture detection thresholds - relaxed for better tap detection
-	const TAP_MAX_DISTANCE = 30; // Increased from 10px - allows for natural finger movement
-	const TAP_MAX_DURATION = 500; // Increased from 300ms - allows for slower taps
-	// Temporarily disabled - will re-enable in Phase 2
-	// const SWIPE_THRESHOLD_HORIZONTAL = 50; // Minimum horizontal swipe distance (px)
-	// const SWIPE_THRESHOLD_VERTICAL = 80; // Minimum vertical swipe distance (px)
-	// const SWIPE_VELOCITY_MIN = 0.3; // Minimum swipe velocity (px/ms)
+	// Swipe down visual feedback
+	let dragOffsetY = $state(0);
+	let backdropOpacity = $state(0.95);
+
+	// Gesture detection thresholds
+	const TAP_MAX_DISTANCE = 30; // Max distance to consider as tap (px)
+	const TAP_MAX_DURATION = 500; // Max duration to consider as tap (ms)
+	const SWIPE_THRESHOLD_HORIZONTAL = 50; // Minimum horizontal swipe distance (px)
+	const SWIPE_THRESHOLD_VERTICAL = 100; // Minimum vertical swipe distance (px)
+	const SWIPE_VELOCITY_MIN = 0.2; // Minimum swipe velocity (px/ms)
+
+	// Tap zones - improved for better UX
+	const TAP_ZONE_LEFT = 0.4; // 0-40% = previous
+	const TAP_ZONE_RIGHT = 0.6; // 60-100% = next
+	// Center 40-60% = pause/resume
 
 	// Computed
 	let currentHighlight = $derived(highlights[activeHighlightIndex]);
@@ -53,8 +62,29 @@
 	let itemsCount = $derived(currentHighlight?.items.length || 0);
 	let duration = $derived(currentItem?.type === 'video' ? (currentItem.duration || 15) * 1000 : (currentItem?.duration || 5) * 1000);
 
+	// Edge detection for swipes
+	let isFirstHighlight = $derived(activeHighlightIndex === 0);
+	let isLastHighlight = $derived(activeHighlightIndex === highlights.length - 1);
+
 	// Progress timer
 	let progressInterval: ReturnType<typeof setInterval> | null = null;
+
+	// Haptic feedback for Telegram WebApp
+	function triggerHaptic(type: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light') {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const webApp = (window as any)?.Telegram?.WebApp;
+			if (typeof window !== 'undefined' && webApp?.HapticFeedback) {
+				if (type === 'success' || type === 'error') {
+					webApp.HapticFeedback.notificationOccurred(type);
+				} else {
+					webApp.HapticFeedback.impactOccurred(type);
+				}
+			}
+		} catch {
+			// Silently fail if haptic not available
+		}
+	}
 
 	function startProgress() {
 		progress = 0;
@@ -83,6 +113,7 @@
 
 	function goToNextItem() {
 		recordCurrentView(true);
+		triggerHaptic('light');
 
 		if (currentItemIndex < itemsCount - 1) {
 			currentItemIndex++;
@@ -94,6 +125,7 @@
 
 	function goToPrevItem() {
 		recordCurrentView(false);
+		triggerHaptic('light');
 
 		if (progress > duration * 0.2) {
 			// Restart current item if past 20%
@@ -128,6 +160,8 @@
 	async function handleLinkClick() {
 		if (!currentItem?.linkUrl) return;
 
+		triggerHaptic('medium');
+
 		try {
 			await recordView({
 				storyItemId: currentItem.id,
@@ -148,7 +182,7 @@
 	function handleGestureStart(e: MouseEvent | TouchEvent) {
 		if (isTransitioning) return;
 
-		paused = true; // Pause video during interaction
+		paused = true; // Pause during interaction
 		isDragging = true;
 		touchStartTime = Date.now();
 
@@ -163,6 +197,7 @@
 		touchEndX = touchStartX;
 		touchEndY = touchStartY;
 		swipeDirection = 'none';
+		dragOffsetY = 0;
 	}
 
 	function handleGestureMove(e: MouseEvent | TouchEvent) {
@@ -176,14 +211,20 @@
 			touchEndY = e.clientY;
 		}
 
-		// Calculate swipe direction (for visual feedback if needed)
 		const deltaX = touchEndX - touchStartX;
 		const deltaY = touchEndY - touchStartY;
 
+		// Determine swipe direction
 		if (Math.abs(deltaY) > Math.abs(deltaX)) {
 			swipeDirection = deltaY < 0 ? 'up' : 'down';
 		} else {
 			swipeDirection = deltaX < 0 ? 'left' : 'right';
+		}
+
+		// Visual feedback for swipe down (close gesture)
+		if (swipeDirection === 'down' && deltaY > 0) {
+			dragOffsetY = Math.min(deltaY * 0.5, 200); // Max 200px offset
+			backdropOpacity = Math.max(0.3, 0.95 - (deltaY / 400)); // Fade backdrop
 		}
 	}
 
@@ -191,114 +232,123 @@
 		if (!isDragging) return;
 
 		isDragging = false;
-		paused = false; // Resume video
+		paused = false; // Resume playback
 
 		const deltaX = touchEndX - touchStartX;
 		const deltaY = touchEndY - touchStartY;
 		const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-		const duration = Date.now() - touchStartTime;
+		const gestureDuration = Date.now() - touchStartTime;
+		const velocity = distance / gestureDuration;
 
-		// Debug logging - remove after testing
-		console.log('[StoryViewer] Gesture End:', {
-			distance: distance.toFixed(1),
-			duration,
-			TAP_MAX_DISTANCE,
-			TAP_MAX_DURATION,
-			isTap: distance < TAP_MAX_DISTANCE && duration < TAP_MAX_DURATION
-		});
+		// Reset visual feedback
+		dragOffsetY = 0;
+		backdropOpacity = 0.95;
 
-		// Only handle tap gesture - swipe functionality temporarily disabled
-		if (distance < TAP_MAX_DISTANCE && duration < TAP_MAX_DURATION) {
-			// Tap detected - delegate to tap handler
-			handleTapGesture(e);
+		// Determine gesture type
+		const isTap = distance < TAP_MAX_DISTANCE && gestureDuration < TAP_MAX_DURATION;
+		const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY) &&
+			Math.abs(deltaX) > SWIPE_THRESHOLD_HORIZONTAL &&
+			velocity > SWIPE_VELOCITY_MIN;
+		const isVerticalSwipe = Math.abs(deltaY) > Math.abs(deltaX) &&
+			deltaY > SWIPE_THRESHOLD_VERTICAL &&
+			velocity > SWIPE_VELOCITY_MIN;
+
+		if (isTap) {
+			handleTapGesture();
+		} else if (isVerticalSwipe && swipeDirection === 'down') {
+			handleVerticalSwipe();
+		} else if (isHorizontalSwipe) {
+			handleHorizontalSwipe(deltaX < 0 ? 'left' : 'right');
 		}
-		// Note: Swipe gestures (vertical/horizontal) disabled until tap navigation is stable
 
 		// Reset gesture state
 		swipeDirection = 'none';
 	}
 
-	// TEMPORARILY DISABLED - Phase 2 feature (re-enable after tap navigation is stable)
-	// function handleVerticalSwipe() {
-	// 	isTransitioning = true;
-	// 	swipeDirection = 'down';
-	//
-	// 	// Add slide-down animation class to viewer-container
-	// 	// After animation completes, call onClose()
-	// 	setTimeout(() => {
-	// 		onClose();
-	// 		isTransitioning = false;
-	// 		swipeDirection = 'none';
-	// 	}, 300);
-	// }
+	// Swipe down to close Stories
+	function handleVerticalSwipe() {
+		isTransitioning = true;
+		swipeDirection = 'down';
+		triggerHaptic('medium');
 
-	// TEMPORARILY DISABLED - Phase 2 feature (re-enable after tap navigation is stable)
-	// function handleHorizontalSwipe(direction: 'left' | 'right') {
-	// 	if (isTransitioning) return;
-	//
-	// 	const isFirstHighlight = activeHighlightIndex === 0;
-	// 	const isLastHighlight = activeHighlightIndex === highlights.length - 1;
-	//
-	// 	if (direction === 'left' && !isLastHighlight) {
-	// 		// Swipe left = next highlight
-	// 		isTransitioning = true;
-	// 		swipeDirection = 'left';
-	//
-	// 		setTimeout(() => {
-	// 			onNext();
-	// 			isTransitioning = false;
-	// 			swipeDirection = 'none';
-	// 		}, 300);
-	// 	} else if (direction === 'right' && !isFirstHighlight) {
-	// 		// Swipe right = previous highlight
-	// 		isTransitioning = true;
-	// 		swipeDirection = 'right';
-	//
-	// 		setTimeout(() => {
-	// 			onPrev();
-	// 			isTransitioning = false;
-	// 			swipeDirection = 'none';
-	// 		}, 300);
-	// 	} else {
-	// 		// Edge case: bounce animation
-	// 		isTransitioning = true;
-	// 		swipeDirection = direction;
-	//
-	// 		setTimeout(() => {
-	// 			isTransitioning = false;
-	// 			swipeDirection = 'none';
-	// 		}, 400);
-	// 	}
-	// }
+		// Animate and close
+		setTimeout(() => {
+			onClose();
+			isTransitioning = false;
+			swipeDirection = 'none';
+		}, 250);
+	}
 
-	function handleTapGesture(e: MouseEvent | TouchEvent) {
-		// Preserve existing tap logic
-		const target = e.currentTarget as HTMLElement;
-		const rect = target.getBoundingClientRect();
+	// Swipe left/right to navigate between highlights
+	function handleHorizontalSwipe(direction: 'left' | 'right') {
+		if (isTransitioning) return;
 
-		let clientX: number;
-		if ('changedTouches' in e) {
-			clientX = e.changedTouches[0].clientX;
+		if (direction === 'left' && !isLastHighlight) {
+			// Swipe left = next highlight
+			isTransitioning = true;
+			swipeDirection = 'left';
+			triggerHaptic('light');
+
+			setTimeout(() => {
+				onNext();
+				currentItemIndex = 0; // Reset to first item
+				isTransitioning = false;
+				swipeDirection = 'none';
+			}, 250);
+		} else if (direction === 'right' && !isFirstHighlight) {
+			// Swipe right = previous highlight
+			isTransitioning = true;
+			swipeDirection = 'right';
+			triggerHaptic('light');
+
+			setTimeout(() => {
+				onPrev();
+				currentItemIndex = 0; // Reset to first item
+				isTransitioning = false;
+				swipeDirection = 'none';
+			}, 250);
 		} else {
-			clientX = touchEndX; // Use stored position from gesture tracking
+			// Edge case: bounce animation (first or last highlight)
+			isTransitioning = true;
+			swipeDirection = direction;
+			triggerHaptic('error');
+
+			setTimeout(() => {
+				isTransitioning = false;
+				swipeDirection = 'none';
+			}, 350);
 		}
+	}
 
-		const tapPosition = (clientX - rect.left) / rect.width;
+	// Tap gesture handler - uses stored touchEndX for reliable position
+	function handleTapGesture() {
+		if (!viewerContainerEl) return;
 
-		// Debug logging - remove after testing
-		console.log('[StoryViewer] Tap detected:', {
-			clientX: clientX.toFixed(0),
-			rectLeft: rect.left.toFixed(0),
-			width: rect.width.toFixed(0),
-			tapPosition: (tapPosition * 100).toFixed(1) + '%',
-			action: tapPosition < 0.3 ? 'PREV' : tapPosition > 0.7 ? 'NEXT' : 'CENTER (no action)'
-		});
+		const rect = viewerContainerEl.getBoundingClientRect();
+		const tapPosition = (touchEndX - rect.left) / rect.width;
 
-		if (tapPosition < 0.3) {
+		if (tapPosition < TAP_ZONE_LEFT) {
+			// Left zone - previous item
 			goToPrevItem();
-		} else if (tapPosition > 0.7) {
+		} else if (tapPosition > TAP_ZONE_RIGHT) {
+			// Right zone - next item
 			goToNextItem();
+		} else {
+			// Center zone - toggle pause
+			paused = !paused;
+			triggerHaptic('light');
 		}
+	}
+
+	// Direct click handlers for navigation hint zones
+	function handleLeftZoneClick(e: MouseEvent) {
+		e.stopPropagation();
+		goToPrevItem();
+	}
+
+	function handleRightZoneClick(e: MouseEvent) {
+		e.stopPropagation();
+		goToNextItem();
 	}
 
 	// Handle keyboard navigation
@@ -309,6 +359,20 @@
 				break;
 			case 'ArrowRight':
 				goToNextItem();
+				break;
+			case 'ArrowUp':
+				// Previous highlight
+				if (!isFirstHighlight) {
+					handleHorizontalSwipe('right');
+				}
+				break;
+			case 'ArrowDown':
+				// Next highlight or close if last
+				if (!isLastHighlight) {
+					handleHorizontalSwipe('left');
+				} else {
+					onClose();
+				}
 				break;
 			case 'Escape':
 				onClose();
@@ -340,7 +404,6 @@
 	});
 
 	onMount(() => {
-		// Note: startProgress is called by $effect when activeHighlightIndex changes
 		window.addEventListener('keydown', handleKeydown);
 	});
 
@@ -352,9 +415,28 @@
 </script>
 
 <div class="story-viewer">
-	<div class="viewer-backdrop" onclick={onClose}></div>
+	<div
+		class="viewer-backdrop"
+		class:closing={swipeDirection === 'down' && isTransitioning}
+		style="opacity: {backdropOpacity}"
+		onclick={onClose}
+		onkeydown={(e) => e.key === 'Escape' && onClose()}
+		role="button"
+		tabindex="-1"
+		aria-label="Закрыть истории"
+	></div>
 
-	<div class="viewer-container">
+	<div
+		class="viewer-container"
+		class:transitioning={isTransitioning}
+		class:swipe-left={swipeDirection === 'left' && isTransitioning}
+		class:swipe-right={swipeDirection === 'right' && isTransitioning}
+		class:swipe-down={swipeDirection === 'down' && isTransitioning}
+		class:bounce-left={swipeDirection === 'left' && isTransitioning && isLastHighlight}
+		class:bounce-right={swipeDirection === 'right' && isTransitioning && isFirstHighlight}
+		style="transform: translateY({dragOffsetY}px)"
+		bind:this={viewerContainerEl}
+	>
 		<!-- Progress bars -->
 		<div class="progress-bars">
 			{#each currentHighlight?.items || [] as item, index}
@@ -380,21 +462,20 @@
 					{/if}
 				</div>
 				<span class="highlight-title">{currentHighlight?.title}</span>
+				{#if paused}
+					<span class="paused-indicator">⏸</span>
+				{/if}
 			</div>
-			<button class="close-btn" onclick={onClose}>
+			<button class="close-btn" onclick={onClose} aria-label="Закрыть">
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M18 6L6 18M6 6l12 12" />
 				</svg>
 			</button>
 		</div>
 
-		<!-- Content -->
+		<!-- Content with gesture handlers -->
 		<div
 			class="viewer-content"
-			class:transitioning={isTransitioning}
-			class:swipe-left={swipeDirection === 'left'}
-			class:swipe-right={swipeDirection === 'right'}
-			class:swipe-down={swipeDirection === 'down'}
 			role="button"
 			tabindex="0"
 			onmousedown={handleGestureStart}
@@ -428,6 +509,17 @@
 					</video>
 				{/if}
 			{/if}
+
+			<!-- Pause overlay indicator -->
+			{#if paused}
+				<div class="pause-overlay">
+					<div class="pause-icon">
+						<svg viewBox="0 0 24 24" fill="white">
+							<path d="M8 5v14l11-7z"/>
+						</svg>
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Link button -->
@@ -442,11 +534,19 @@
 			</div>
 		{/if}
 
-		<!-- Navigation hints -->
-		<div class="nav-hint left"></div>
-		<div class="nav-hint right"></div>
+		<!-- Navigation hint zones with click handlers -->
+		<button
+			class="nav-hint left"
+			onclick={handleLeftZoneClick}
+			aria-label="Предыдущая история"
+		></button>
+		<button
+			class="nav-hint right"
+			onclick={handleRightZoneClick}
+			aria-label="Следующая история"
+		></button>
 
-		<!-- Highlight navigation (for multiple highlights) -->
+		<!-- Highlight navigation dots (for multiple highlights) -->
 		{#if highlights.length > 1}
 			<div class="highlight-nav">
 				{#each highlights as h, index}
@@ -454,10 +554,16 @@
 						class="highlight-dot"
 						class:active={index === activeHighlightIndex}
 						onclick={() => onGoTo?.(index)}
+						aria-label="Перейти к истории {index + 1}"
 					></button>
 				{/each}
 			</div>
 		{/if}
+
+		<!-- Swipe down indicator -->
+		<div class="swipe-down-hint">
+			<div class="swipe-indicator"></div>
+		</div>
 	</div>
 </div>
 
@@ -475,6 +581,11 @@
 		position: absolute;
 		inset: 0;
 		background: rgba(0, 0, 0, 0.95);
+		transition: opacity 0.25s ease;
+	}
+
+	.viewer-backdrop.closing {
+		opacity: 0 !important;
 	}
 
 	.viewer-container {
@@ -486,6 +597,7 @@
 		display: flex;
 		flex-direction: column;
 		background: #000;
+		transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
 	}
 
 	@media (min-width: 768px) {
@@ -495,6 +607,84 @@
 			border-radius: 1rem;
 			overflow: hidden;
 		}
+	}
+
+	/* Swipe animations */
+	.viewer-container.swipe-left {
+		animation: slideOutLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+
+	.viewer-container.swipe-right {
+		animation: slideOutRight 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+
+	.viewer-container.swipe-down {
+		animation: slideDown 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+
+	/* Bounce animations for edge cases */
+	.viewer-container.bounce-left {
+		animation: bounceLeft 0.35s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+	}
+
+	.viewer-container.bounce-right {
+		animation: bounceRight 0.35s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+	}
+
+	@keyframes slideOutLeft {
+		from {
+			transform: translateX(0);
+			opacity: 1;
+		}
+		to {
+			transform: translateX(-30%);
+			opacity: 0;
+		}
+	}
+
+	@keyframes slideOutRight {
+		from {
+			transform: translateX(0);
+			opacity: 1;
+		}
+		to {
+			transform: translateX(30%);
+			opacity: 0;
+		}
+	}
+
+	@keyframes slideDown {
+		from {
+			transform: translateY(0);
+			opacity: 1;
+		}
+		to {
+			transform: translateY(100%);
+			opacity: 0;
+		}
+	}
+
+	@keyframes bounceLeft {
+		0%, 100% {
+			transform: translateX(0);
+		}
+		50% {
+			transform: translateX(-20px);
+		}
+	}
+
+	@keyframes bounceRight {
+		0%, 100% {
+			transform: translateX(0);
+		}
+		50% {
+			transform: translateX(20px);
+		}
+	}
+
+	/* Disable pointer events during transition */
+	.viewer-container.transitioning {
+		pointer-events: none;
 	}
 
 	/* Progress bars */
@@ -572,6 +762,11 @@
 		font-size: 0.9375rem;
 	}
 
+	.paused-indicator {
+		font-size: 0.875rem;
+		opacity: 0.7;
+	}
+
 	.close-btn {
 		width: 36px;
 		height: 36px;
@@ -605,6 +800,7 @@
 		cursor: pointer;
 		-webkit-user-select: none;
 		user-select: none;
+		position: relative;
 	}
 
 	.story-media {
@@ -612,6 +808,33 @@
 		height: 100%;
 		object-fit: contain;
 		pointer-events: none;
+	}
+
+	/* Pause overlay */
+	.pause-overlay {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.3);
+		pointer-events: none;
+	}
+
+	.pause-icon {
+		width: 64px;
+		height: 64px;
+		border-radius: 50%;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.pause-icon svg {
+		width: 32px;
+		height: 32px;
+		margin-left: 4px; /* Visual centering for play icon */
 	}
 
 	/* Link button */
@@ -655,13 +878,21 @@
 		height: 18px;
 	}
 
-	/* Navigation hints */
+	/* Navigation hint zones - now clickable buttons */
 	.nav-hint {
 		position: absolute;
-		top: 0;
-		bottom: 0;
-		width: 30%;
+		top: 80px; /* Below header */
+		bottom: 80px; /* Above link button */
+		width: 40%; /* Expanded from 30% */
 		z-index: 5;
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.nav-hint:focus {
+		outline: none;
 	}
 
 	.nav-hint.left {
@@ -703,87 +934,20 @@
 		background: rgba(255, 255, 255, 0.7);
 	}
 
-	/* Gesture animations */
-	.viewer-container {
-		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	}
-
-	/* TEMPORARILY DISABLED - Phase 2 feature (swipe animations) */
-	/* Swipe left animation */
-	/* .viewer-content.swipe-left {
-		animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-	}
-
-	@keyframes slideOutLeft {
-		from {
-			transform: translateX(0);
-			opacity: 1;
-		}
-		to {
-			transform: translateX(-100%);
-			opacity: 0;
-		}
-	} */
-
-	/* Swipe right animation */
-	/* .viewer-content.swipe-right {
-		animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-	}
-
-	@keyframes slideOutRight {
-		from {
-			transform: translateX(0);
-			opacity: 1;
-		}
-		to {
-			transform: translateX(100%);
-			opacity: 0;
-		}
-	} */
-
-	/* Swipe down to close animation */
-	/* .viewer-content.swipe-down {
-		animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-	}
-
-	@keyframes slideDown {
-		from {
-			transform: translateY(0);
-			opacity: 1;
-		}
-		to {
-			transform: translateY(100%);
-			opacity: 0;
-		}
-	} */
-
-	/* Bounce animation for edge cases */
-	/* .viewer-content.transitioning.swipe-left:not(.swipe-down),
-	.viewer-content.transitioning.swipe-right:not(.swipe-down) {
-		animation: bounce 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-	}
-
-	@keyframes bounce {
-		0%,
-		100% {
-			transform: translateX(0);
-		}
-		50% {
-			transform: translateX(var(--bounce-offset, 20px));
-		}
-	} */
-
-	/* Apply correct bounce direction */
-	/* .viewer-content.swipe-left {
-		--bounce-offset: -20px;
-	}
-
-	.viewer-content.swipe-right {
-		--bounce-offset: 20px;
-	} */
-
-	/* Disable pointer events during transition */
-	.viewer-content.transitioning {
+	/* Swipe down hint indicator */
+	.swipe-down-hint {
+		position: absolute;
+		bottom: 8px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 5;
 		pointer-events: none;
+	}
+
+	.swipe-indicator {
+		width: 40px;
+		height: 4px;
+		background: rgba(255, 255, 255, 0.5);
+		border-radius: 2px;
 	}
 </style>
