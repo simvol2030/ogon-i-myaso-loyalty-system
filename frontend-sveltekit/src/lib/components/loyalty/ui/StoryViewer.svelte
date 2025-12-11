@@ -30,6 +30,18 @@
 	let viewStartTime = $state(Date.now());
 	let viewerContainerEl = $state<HTMLElement | null>(null);
 
+	// Audio control - muted by default, persists during session
+	let isMuted = $state(true);
+
+	// Check if current item is video
+	let isCurrentVideo = $derived(currentItem?.type === 'video');
+
+	// Toggle mute function
+	function toggleMute() {
+		isMuted = !isMuted;
+		triggerHaptic('light');
+	}
+
 	// Gesture detection state
 	let touchStartX = $state(0);
 	let touchStartY = $state(0);
@@ -381,6 +393,13 @@
 				paused = !paused;
 				e.preventDefault();
 				break;
+			case 'm':
+			case 'M':
+				// Toggle mute for video
+				if (isCurrentVideo) {
+					toggleMute();
+				}
+				break;
 		}
 	}
 
@@ -466,11 +485,29 @@
 					<span class="paused-indicator">⏸</span>
 				{/if}
 			</div>
-			<button class="close-btn" onclick={onClose} aria-label="Закрыть">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M18 6L6 18M6 6l12 12" />
-				</svg>
-			</button>
+			<div class="header-buttons">
+				{#if isCurrentVideo}
+					<button class="mute-btn" onclick={toggleMute} aria-label={isMuted ? 'Включить звук' : 'Выключить звук'}>
+						{#if isMuted}
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M11 5L6 9H2v6h4l5 4V5z" />
+								<line x1="23" y1="9" x2="17" y2="15" />
+								<line x1="17" y1="9" x2="23" y2="15" />
+							</svg>
+						{:else}
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M11 5L6 9H2v6h4l5 4V5z" />
+								<path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+							</svg>
+						{/if}
+					</button>
+				{/if}
+				<button class="close-btn" onclick={onClose} aria-label="Закрыть">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M18 6L6 18M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
 		</div>
 
 		<!-- Content with gesture handlers -->
@@ -502,7 +539,7 @@
 						class="story-media"
 						autoplay
 						playsinline
-						muted
+						muted={isMuted}
 						loop={false}
 					>
 						<track kind="captions" />
@@ -765,6 +802,35 @@
 	.paused-indicator {
 		font-size: 0.875rem;
 		opacity: 0.7;
+	}
+
+	.header-buttons {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.mute-btn {
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.1);
+		border: none;
+		color: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: background 0.2s;
+	}
+
+	.mute-btn:hover {
+		background: rgba(255, 255, 255, 0.2);
+	}
+
+	.mute-btn svg {
+		width: 18px;
+		height: 18px;
 	}
 
 	.close-btn {
