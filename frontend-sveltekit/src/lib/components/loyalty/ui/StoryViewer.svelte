@@ -39,12 +39,13 @@
 	let swipeDirection = $state<'none' | 'left' | 'right' | 'up' | 'down'>('none');
 	let isTransitioning = $state(false);
 
-	// Gesture detection thresholds
-	const SWIPE_THRESHOLD_HORIZONTAL = 50; // Minimum horizontal swipe distance (px)
-	const SWIPE_THRESHOLD_VERTICAL = 80; // Minimum vertical swipe distance (px)
-	const SWIPE_VELOCITY_MIN = 0.3; // Minimum swipe velocity (px/ms)
-	const TAP_MAX_DISTANCE = 10; // Maximum movement for tap (px)
-	const TAP_MAX_DURATION = 300; // Maximum duration for tap (ms)
+	// Gesture detection thresholds - relaxed for better tap detection
+	const TAP_MAX_DISTANCE = 30; // Increased from 10px - allows for natural finger movement
+	const TAP_MAX_DURATION = 500; // Increased from 300ms - allows for slower taps
+	// Temporarily disabled - will re-enable in Phase 2
+	// const SWIPE_THRESHOLD_HORIZONTAL = 50; // Minimum horizontal swipe distance (px)
+	// const SWIPE_THRESHOLD_VERTICAL = 80; // Minimum vertical swipe distance (px)
+	// const SWIPE_VELOCITY_MIN = 0.3; // Minimum swipe velocity (px/ms)
 
 	// Computed
 	let currentHighlight = $derived(highlights[activeHighlightIndex]);
@@ -196,83 +197,79 @@
 		const deltaY = touchEndY - touchStartY;
 		const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 		const duration = Date.now() - touchStartTime;
-		const velocity = distance / duration;
 
-		// Priority 1: Vertical swipe (close viewer)
-		if (Math.abs(deltaY) > SWIPE_THRESHOLD_VERTICAL && Math.abs(deltaY) > Math.abs(deltaX)) {
-			if (deltaY > 0) {
-				handleVerticalSwipe();
-				return;
-			}
-		}
+		// Debug logging - remove after testing
+		console.log('[StoryViewer] Gesture End:', {
+			distance: distance.toFixed(1),
+			duration,
+			TAP_MAX_DISTANCE,
+			TAP_MAX_DURATION,
+			isTap: distance < TAP_MAX_DISTANCE && duration < TAP_MAX_DURATION
+		});
 
-		// Priority 2: Horizontal swipe (change highlight)
-		if (Math.abs(deltaX) > SWIPE_THRESHOLD_HORIZONTAL && velocity > SWIPE_VELOCITY_MIN) {
-			handleHorizontalSwipe(deltaX < 0 ? 'left' : 'right');
-			return;
-		}
-
-		// Priority 3: Tap (change story item)
+		// Only handle tap gesture - swipe functionality temporarily disabled
 		if (distance < TAP_MAX_DISTANCE && duration < TAP_MAX_DURATION) {
+			// Tap detected - delegate to tap handler
 			handleTapGesture(e);
-			return;
 		}
+		// Note: Swipe gestures (vertical/horizontal) disabled until tap navigation is stable
 
-		// No gesture detected, just resume
+		// Reset gesture state
 		swipeDirection = 'none';
 	}
 
-	// Gesture action handlers
-	function handleVerticalSwipe() {
-		isTransitioning = true;
-		swipeDirection = 'down';
+	// TEMPORARILY DISABLED - Phase 2 feature (re-enable after tap navigation is stable)
+	// function handleVerticalSwipe() {
+	// 	isTransitioning = true;
+	// 	swipeDirection = 'down';
+	//
+	// 	// Add slide-down animation class to viewer-container
+	// 	// After animation completes, call onClose()
+	// 	setTimeout(() => {
+	// 		onClose();
+	// 		isTransitioning = false;
+	// 		swipeDirection = 'none';
+	// 	}, 300);
+	// }
 
-		// Add slide-down animation class to viewer-container
-		// After animation completes, call onClose()
-		setTimeout(() => {
-			onClose();
-			isTransitioning = false;
-			swipeDirection = 'none';
-		}, 300);
-	}
-
-	function handleHorizontalSwipe(direction: 'left' | 'right') {
-		if (isTransitioning) return;
-
-		const isFirstHighlight = activeHighlightIndex === 0;
-		const isLastHighlight = activeHighlightIndex === highlights.length - 1;
-
-		if (direction === 'left' && !isLastHighlight) {
-			// Swipe left = next highlight
-			isTransitioning = true;
-			swipeDirection = 'left';
-
-			setTimeout(() => {
-				onNext();
-				isTransitioning = false;
-				swipeDirection = 'none';
-			}, 300);
-		} else if (direction === 'right' && !isFirstHighlight) {
-			// Swipe right = previous highlight
-			isTransitioning = true;
-			swipeDirection = 'right';
-
-			setTimeout(() => {
-				onPrev();
-				isTransitioning = false;
-				swipeDirection = 'none';
-			}, 300);
-		} else {
-			// Edge case: bounce animation
-			isTransitioning = true;
-			swipeDirection = direction;
-
-			setTimeout(() => {
-				isTransitioning = false;
-				swipeDirection = 'none';
-			}, 400);
-		}
-	}
+	// TEMPORARILY DISABLED - Phase 2 feature (re-enable after tap navigation is stable)
+	// function handleHorizontalSwipe(direction: 'left' | 'right') {
+	// 	if (isTransitioning) return;
+	//
+	// 	const isFirstHighlight = activeHighlightIndex === 0;
+	// 	const isLastHighlight = activeHighlightIndex === highlights.length - 1;
+	//
+	// 	if (direction === 'left' && !isLastHighlight) {
+	// 		// Swipe left = next highlight
+	// 		isTransitioning = true;
+	// 		swipeDirection = 'left';
+	//
+	// 		setTimeout(() => {
+	// 			onNext();
+	// 			isTransitioning = false;
+	// 			swipeDirection = 'none';
+	// 		}, 300);
+	// 	} else if (direction === 'right' && !isFirstHighlight) {
+	// 		// Swipe right = previous highlight
+	// 		isTransitioning = true;
+	// 		swipeDirection = 'right';
+	//
+	// 		setTimeout(() => {
+	// 			onPrev();
+	// 			isTransitioning = false;
+	// 			swipeDirection = 'none';
+	// 		}, 300);
+	// 	} else {
+	// 		// Edge case: bounce animation
+	// 		isTransitioning = true;
+	// 		swipeDirection = direction;
+	//
+	// 		setTimeout(() => {
+	// 			isTransitioning = false;
+	// 			swipeDirection = 'none';
+	// 		}, 400);
+	// 	}
+	// }
 
 	function handleTapGesture(e: MouseEvent | TouchEvent) {
 		// Preserve existing tap logic
@@ -287,6 +284,15 @@
 		}
 
 		const tapPosition = (clientX - rect.left) / rect.width;
+
+		// Debug logging - remove after testing
+		console.log('[StoryViewer] Tap detected:', {
+			clientX: clientX.toFixed(0),
+			rectLeft: rect.left.toFixed(0),
+			width: rect.width.toFixed(0),
+			tapPosition: (tapPosition * 100).toFixed(1) + '%',
+			action: tapPosition < 0.3 ? 'PREV' : tapPosition > 0.7 ? 'NEXT' : 'CENTER (no action)'
+		});
 
 		if (tapPosition < 0.3) {
 			goToPrevItem();
@@ -702,8 +708,9 @@
 		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
+	/* TEMPORARILY DISABLED - Phase 2 feature (swipe animations) */
 	/* Swipe left animation */
-	.viewer-content.swipe-left {
+	/* .viewer-content.swipe-left {
 		animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 	}
 
@@ -716,10 +723,10 @@
 			transform: translateX(-100%);
 			opacity: 0;
 		}
-	}
+	} */
 
 	/* Swipe right animation */
-	.viewer-content.swipe-right {
+	/* .viewer-content.swipe-right {
 		animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 	}
 
@@ -732,10 +739,10 @@
 			transform: translateX(100%);
 			opacity: 0;
 		}
-	}
+	} */
 
 	/* Swipe down to close animation */
-	.viewer-content.swipe-down {
+	/* .viewer-content.swipe-down {
 		animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 	}
 
@@ -748,10 +755,10 @@
 			transform: translateY(100%);
 			opacity: 0;
 		}
-	}
+	} */
 
 	/* Bounce animation for edge cases */
-	.viewer-content.transitioning.swipe-left:not(.swipe-down),
+	/* .viewer-content.transitioning.swipe-left:not(.swipe-down),
 	.viewer-content.transitioning.swipe-right:not(.swipe-down) {
 		animation: bounce 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
 	}
@@ -764,16 +771,16 @@
 		50% {
 			transform: translateX(var(--bounce-offset, 20px));
 		}
-	}
+	} */
 
 	/* Apply correct bounce direction */
-	.viewer-content.swipe-left {
+	/* .viewer-content.swipe-left {
 		--bounce-offset: -20px;
 	}
 
 	.viewer-content.swipe-right {
 		--bounce-offset: 20px;
-	}
+	} */
 
 	/* Disable pointer events during transition */
 	.viewer-content.transitioning {
