@@ -321,22 +321,33 @@ export const uploadAPI = {
 
 				// Try to get more specific error information
 				const mediaError = video.error;
-				let errorMessage = 'Не удалось прочитать видео файл';
 
+				// For codec/format issues, allow upload anyway - video might still work on server
+				// or can be transcoded later. Only block on clear errors.
 				if (mediaError) {
 					switch (mediaError.code) {
 						case MediaError.MEDIA_ERR_ABORTED:
-							errorMessage = 'Загрузка видео была прервана';
-							break;
+							resolve({ valid: false, error: 'Загрузка видео была прервана' });
+							return;
 						case MediaError.MEDIA_ERR_NETWORK:
-							errorMessage = 'Ошибка сети при загрузке видео';
-							break;
+							resolve({ valid: false, error: 'Ошибка сети при загрузке видео' });
+							return;
 						case MediaError.MEDIA_ERR_DECODE:
-							errorMessage = 'Видео повреждено или использует неподдерживаемый кодек (попробуйте конвертировать в MP4 H.264)';
-							break;
 						case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-							errorMessage = `Формат видео не поддерживается браузером. Тип файла: ${file.type || 'неизвестный'}. Попробуйте MP4 (H.264)`;
-							break;
+							// These errors often occur with valid videos that use codecs
+							// not supported by browser (VP9, AV1, HEVC) but work fine on server
+							console.warn('Browser cannot decode video, but allowing upload:', {
+								type: file.type,
+								size: sizeMb.toFixed(2) + ' MB',
+								code: mediaError?.code
+							});
+							// Allow upload without duration validation
+							resolve({
+								valid: true,
+								duration: undefined,
+								error: undefined
+							});
+							return;
 					}
 				}
 
@@ -347,7 +358,8 @@ export const uploadAPI = {
 					code: mediaError?.code
 				});
 
-				resolve({ valid: false, error: errorMessage });
+				// For unknown errors, also allow upload
+				resolve({ valid: true, duration: undefined });
 			};
 
 			video.src = URL.createObjectURL(file);
