@@ -68,11 +68,20 @@
 	const TAP_ZONE_RIGHT = 0.6; // 60-100% = next
 	// Center 40-60% = pause/resume
 
+	// Video duration tracking (actual duration from video element)
+	let actualVideoDuration = $state(0);
+
 	// Computed
 	let currentHighlight = $derived(highlights[activeHighlightIndex]);
 	let currentItem = $derived(currentHighlight?.items[currentItemIndex]);
 	let itemsCount = $derived(currentHighlight?.items.length || 0);
-	let duration = $derived(currentItem?.type === 'video' ? (currentItem.duration || 15) * 1000 : (currentItem?.duration || 5) * 1000);
+
+	// For photos: use configured duration; For videos: use actual video duration
+	let duration = $derived(
+		currentItem?.type === 'video'
+			? (actualVideoDuration > 0 ? actualVideoDuration * 1000 : (currentItem.duration || 30) * 1000)
+			: (currentItem?.duration || 5) * 1000
+	);
 
 	// Edge detection for swipes
 	let isFirstHighlight = $derived(activeHighlightIndex === 0);
@@ -104,16 +113,21 @@
 
 		if (progressInterval) {
 			clearInterval(progressInterval);
+			progressInterval = null;
 		}
 
-		progressInterval = setInterval(() => {
-			if (!paused) {
-				progress += 50;
-				if (progress >= duration) {
-					goToNextItem();
+		// For videos, progress is tracked via timeupdate event
+		// For photos, use interval timer
+		if (currentItem?.type !== 'video') {
+			progressInterval = setInterval(() => {
+				if (!paused) {
+					progress += 50;
+					if (progress >= duration) {
+						goToNextItem();
+					}
 				}
-			}
-		}, 50);
+			}, 50);
+		}
 	}
 
 	function stopProgress() {
@@ -422,6 +436,35 @@
 		}
 	});
 
+	// Video event handlers
+	function handleVideoLoadedMetadata() {
+		if (videoElement && isFinite(videoElement.duration)) {
+			actualVideoDuration = videoElement.duration;
+			// Restart progress with correct duration
+			startProgress();
+		}
+	}
+
+	function handleVideoTimeUpdate() {
+		// Update progress based on actual video playback position
+		if (videoElement && actualVideoDuration > 0 && !paused) {
+			progress = (videoElement.currentTime / actualVideoDuration) * actualVideoDuration * 1000;
+		}
+	}
+
+	function handleVideoEnded() {
+		// Video finished playing, go to next item
+		goToNextItem();
+	}
+
+	// Reset video duration when item changes
+	$effect(() => {
+		if (currentItem) {
+			// Reset actual video duration when switching items
+			actualVideoDuration = 0;
+		}
+	});
+
 	onMount(() => {
 		window.addEventListener('keydown', handleKeydown);
 	});
@@ -541,6 +584,9 @@
 						playsinline
 						muted={isMuted}
 						loop={false}
+						onloadedmetadata={handleVideoLoadedMetadata}
+						ontimeupdate={handleVideoTimeUpdate}
+						onended={handleVideoEnded}
 					>
 						<track kind="captions" />
 					</video>
