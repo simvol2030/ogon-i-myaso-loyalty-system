@@ -985,7 +985,7 @@ export const storiesSettings = sqliteTable('stories_settings', {
 	show_title: integer('show_title', { mode: 'boolean' }).notNull().default(true),
 	title_position: text('title_position', { enum: ['bottom', 'inside'] }).notNull().default('bottom'),
 	highlight_size: integer('highlight_size').notNull().default(70), // px
-	max_video_duration: integer('max_video_duration').notNull().default(45), // секунды
+	max_video_duration: integer('max_video_duration').notNull().default(90), // секунды (1.5 минуты)
 	max_video_size_mb: integer('max_video_size_mb').notNull().default(50),
 	auto_convert_webp: integer('auto_convert_webp', { mode: 'boolean' }).notNull().default(true),
 	webp_quality: integer('webp_quality').notNull().default(85),
