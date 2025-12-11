@@ -3,7 +3,11 @@
  * Управление приветственными сообщениями Telegram бота
  */
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
+import multer from 'multer';
+import sharp from 'sharp';
+import path from 'path';
+import fs from 'fs';
 import { authenticateSession, requireRole } from '../../middleware/session-auth';
 import {
 	getAllWelcomeMessages,
@@ -16,6 +20,70 @@ import {
 } from '../../db/queries/welcomeMessages';
 
 const router = Router();
+
+// =====================================================
+// UPLOAD CONFIGURATION
+// =====================================================
+
+const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'welcome-messages');
+
+// Ensure upload directory exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+	fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const storage = multer.memoryStorage();
+const upload = multer({
+	storage,
+	limits: {
+		fileSize: 10 * 1024 * 1024 // 10MB max for images
+	},
+	fileFilter: (req, file, cb) => {
+		const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+		if (allowedImageTypes.includes(file.mimetype)) {
+			cb(null, true);
+		} else {
+			cb(new Error('Invalid file type. Allowed: JPEG, PNG, WebP, GIF'));
+		}
+	}
+});
+
+/**
+ * Safely delete a media file - prevents path traversal attacks
+ */
+function safeDeleteFile(mediaUrl: string | null): void {
+	if (!mediaUrl) return;
+
+	// Only process URLs that start with /api/uploads/welcome-messages/
+	if (!mediaUrl.startsWith('/api/uploads/welcome-messages/')) {
+		console.warn('[Welcome Messages] Attempted to delete file outside welcome-messages folder:', mediaUrl);
+		return;
+	}
+
+	// Extract just the filename (no path components)
+	const filename = path.basename(mediaUrl);
+	if (!filename || filename.includes('..')) {
+		console.warn('[Welcome Messages] Invalid filename:', filename);
+		return;
+	}
+
+	const filePath = path.join(UPLOADS_DIR, filename);
+
+	// Verify the resolved path is within UPLOADS_DIR
+	const resolvedPath = path.resolve(filePath);
+	const resolvedUploadsDir = path.resolve(UPLOADS_DIR);
+
+	if (!resolvedPath.startsWith(resolvedUploadsDir)) {
+		console.warn('[Welcome Messages] Path traversal attempt blocked:', mediaUrl);
+		return;
+	}
+
+	if (fs.existsSync(resolvedPath)) {
+		fs.unlinkSync(resolvedPath);
+		console.log('[Welcome Messages] Deleted file:', resolvedPath);
+	}
+}
 
 // 🔒 All routes require authentication
 router.use(authenticateSession);
@@ -212,6 +280,11 @@ router.delete('/:id', requireRole('super-admin'), async (req, res) => {
 			return res.status(404).json({ success: false, error: 'Сообщение не найдено' });
 		}
 
+		// Delete associated image file if it's a local upload
+		if (existingMessage.message_image?.startsWith('/api/uploads/welcome-messages/')) {
+			safeDeleteFile(existingMessage.message_image);
+		}
+
 		await deleteWelcomeMessage(id);
 
 		res.json({ success: true, message: 'Сообщение удалено' });
@@ -245,6 +318,50 @@ router.put('/reorder', requireRole('super-admin', 'editor'), async (req, res) =>
 	} catch (error) {
 		console.error('[WELCOME MESSAGES API] Error reordering messages:', error);
 		res.status(500).json({ success: false, error: 'Ошибка изменения порядка' });
+	}
+});
+
+// =====================================================
+// MEDIA UPLOAD
+// =====================================================
+
+/**
+ * POST /api/admin/welcome-messages/upload - Upload image for welcome message
+ */
+router.post('/upload', requireRole('super-admin', 'editor'), upload.single('file'), async (req: Request, res: Response) => {
+	try {
+		if (!req.file) {
+			return res.status(400).json({ success: false, error: 'No file uploaded' });
+		}
+
+		const file = req.file;
+		const timestamp = Date.now();
+		const randomSuffix = Math.random().toString(36).substring(2, 8);
+
+		// Process image and save
+		const filename = `welcome_${timestamp}_${randomSuffix}.webp`;
+		const filePath = path.join(UPLOADS_DIR, filename);
+
+		// Resize and convert to WebP for better quality/size ratio
+		await sharp(file.buffer)
+			.resize(1280, 1280, { fit: 'inside', withoutEnlargement: true })
+			.webp({ quality: 85 })
+			.toFile(filePath);
+
+		const mediaUrl = `/api/uploads/welcome-messages/${filename}`;
+		const stats = fs.statSync(filePath);
+
+		res.json({
+			success: true,
+			data: {
+				url: mediaUrl,
+				filename,
+				size: stats.size
+			}
+		});
+	} catch (error) {
+		console.error('[WELCOME MESSAGES API] Error uploading image:', error);
+		res.status(500).json({ success: false, error: 'Failed to upload image' });
 	}
 });
 

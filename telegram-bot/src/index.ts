@@ -189,13 +189,42 @@ bot.command('start', async (ctx) => {
 			}
 		}
 
-		// Отправить сообщение
-		if (keyboard) {
-			await ctx.reply(messageText, { reply_markup: keyboard });
-		} else {
-			// Для локальной разработки добавляем URL в текст
-			const localTestSuffix = NODE_ENV !== 'production' ? `\n\n💻 Локальный тест: ${WEB_APP_URL}` : '';
-			await ctx.reply(messageText + localTestSuffix);
+		// Отправить сообщение с изображением или без
+		try {
+			if (message.message_image) {
+				// Отправить фото с подписью
+				const photoOptions: any = {
+					caption: messageText,
+					parse_mode: 'HTML' as const
+				};
+				if (keyboard) {
+					photoOptions.reply_markup = keyboard;
+				}
+				await ctx.replyWithPhoto(message.message_image, photoOptions);
+			} else {
+				// Отправить текстовое сообщение
+				if (keyboard) {
+					await ctx.reply(messageText, { reply_markup: keyboard });
+				} else {
+					// Для локальной разработки добавляем URL в текст
+					const localTestSuffix = NODE_ENV !== 'production' ? `\n\n💻 Локальный тест: ${WEB_APP_URL}` : '';
+					await ctx.reply(messageText + localTestSuffix);
+				}
+			}
+		} catch (error) {
+			console.error(`Error sending welcome message #${message.order_number}:`, error);
+			// Fallback: отправить только текст если фото не удалось
+			if (message.message_image) {
+				try {
+					if (keyboard) {
+						await ctx.reply(messageText, { reply_markup: keyboard });
+					} else {
+						await ctx.reply(messageText);
+					}
+				} catch (fallbackError) {
+					console.error('Fallback message also failed:', fallbackError);
+				}
+			}
 		}
 	}
 });
