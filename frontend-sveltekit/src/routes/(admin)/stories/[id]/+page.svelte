@@ -474,7 +474,7 @@
 						<span class="upload-icon">📤</span>
 						<span>Нажмите для загрузки фото или видео</span>
 						<span class="upload-hint">
-							Фото: JPG, PNG, WebP | Видео: MP4, WebM (до {settings?.maxVideoDuration || 90} сек)
+							Фото: JPG, PNG, WebP | Видео: MP4 (H.264), WebM (до {settings?.maxVideoDuration || 90} сек)
 						</span>
 					{/if}
 					<input type="file" accept="image/*,video/mp4,video/webm" onchange={handleMediaUpload} hidden disabled={uploading} />

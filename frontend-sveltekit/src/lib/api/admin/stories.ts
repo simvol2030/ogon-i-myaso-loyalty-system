@@ -247,10 +247,27 @@ export const uploadAPI = {
 	 */
 	validateVideo(file: File, maxDuration: number, maxSizeMb: number): Promise<{ valid: boolean; error?: string; duration?: number }> {
 		return new Promise((resolve) => {
+			// Supported video MIME types
+			const supportedTypes = [
+				'video/mp4',
+				'video/webm',
+				'video/quicktime', // MOV files (iPhone)
+				'video/x-m4v'      // M4V files
+			];
+
+			// Check MIME type
+			if (!supportedTypes.includes(file.type) && !file.type.startsWith('video/')) {
+				resolve({
+					valid: false,
+					error: `Неподдерживаемый формат: ${file.type || 'неизвестный'}. Поддерживаются: MP4, WebM, MOV`
+				});
+				return;
+			}
+
 			// Check file size
 			const sizeMb = file.size / (1024 * 1024);
 			if (sizeMb > maxSizeMb) {
-				resolve({ valid: false, error: `Файл слишком большой. Максимум: ${maxSizeMb} MB` });
+				resolve({ valid: false, error: `Файл слишком большой (${sizeMb.toFixed(1)} MB). Максимум: ${maxSizeMb} MB` });
 				return;
 			}
 
@@ -258,12 +275,40 @@ export const uploadAPI = {
 			const video = document.createElement('video');
 			video.preload = 'metadata';
 
-			video.onloadedmetadata = () => {
+			// Timeout for slow loading or unsupported codecs
+			const timeout = setTimeout(() => {
+				cleanup();
+				// If video is loading but metadata not available, try to proceed without duration check
+				// This can happen with some codec/container combinations
+				console.warn('Video metadata loading timeout, proceeding without duration validation');
+				resolve({
+					valid: true,
+					error: undefined,
+					duration: undefined // Duration will be detected server-side or during upload
+				});
+			}, 10000); // 10 second timeout
+
+			const cleanup = () => {
+				clearTimeout(timeout);
 				URL.revokeObjectURL(video.src);
+				video.onloadedmetadata = null;
+				video.onerror = null;
+			};
+
+			video.onloadedmetadata = () => {
+				cleanup();
+
+				// Check for invalid duration (NaN or Infinity can occur with some formats)
+				if (!isFinite(video.duration) || video.duration <= 0) {
+					console.warn('Could not determine video duration, proceeding without validation');
+					resolve({ valid: true, duration: undefined });
+					return;
+				}
+
 				if (video.duration > maxDuration) {
 					resolve({
 						valid: false,
-						error: `Видео слишком длинное. Максимум: ${maxDuration} секунд`,
+						error: `Видео слишком длинное (${Math.round(video.duration)} сек). Максимум: ${maxDuration} секунд`,
 						duration: video.duration
 					});
 				} else {
@@ -271,9 +316,38 @@ export const uploadAPI = {
 				}
 			};
 
-			video.onerror = () => {
-				URL.revokeObjectURL(video.src);
-				resolve({ valid: false, error: 'Не удалось прочитать видео файл' });
+			video.onerror = (e) => {
+				cleanup();
+
+				// Try to get more specific error information
+				const mediaError = video.error;
+				let errorMessage = 'Не удалось прочитать видео файл';
+
+				if (mediaError) {
+					switch (mediaError.code) {
+						case MediaError.MEDIA_ERR_ABORTED:
+							errorMessage = 'Загрузка видео была прервана';
+							break;
+						case MediaError.MEDIA_ERR_NETWORK:
+							errorMessage = 'Ошибка сети при загрузке видео';
+							break;
+						case MediaError.MEDIA_ERR_DECODE:
+							errorMessage = 'Видео повреждено или использует неподдерживаемый кодек (попробуйте конвертировать в MP4 H.264)';
+							break;
+						case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+							errorMessage = `Формат видео не поддерживается браузером. Тип файла: ${file.type || 'неизвестный'}. Попробуйте MP4 (H.264)`;
+							break;
+					}
+				}
+
+				console.error('Video validation error:', {
+					type: file.type,
+					size: sizeMb.toFixed(2) + ' MB',
+					error: mediaError?.message,
+					code: mediaError?.code
+				});
+
+				resolve({ valid: false, error: errorMessage });
 			};
 
 			video.src = URL.createObjectURL(file);
