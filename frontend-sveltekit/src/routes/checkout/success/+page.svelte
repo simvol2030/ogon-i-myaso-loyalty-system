@@ -13,12 +13,12 @@
 
 	// Status labels
 	const statusLabels: Record<string, { label: string; color: string }> = {
-		new: { label: 'New', color: '#3b82f6' },
-		confirmed: { label: 'Confirmed', color: '#10b981' },
-		processing: { label: 'Processing', color: '#f59e0b' },
-		shipped: { label: 'Shipped', color: '#8b5cf6' },
-		delivered: { label: 'Delivered', color: '#22c55e' },
-		cancelled: { label: 'Cancelled', color: '#ef4444' }
+		new: { label: 'Новый', color: '#3b82f6' },
+		confirmed: { label: 'Подтверждён', color: '#10b981' },
+		processing: { label: 'В обработке', color: '#f59e0b' },
+		shipped: { label: 'Отправлен', color: '#8b5cf6' },
+		delivered: { label: 'Доставлен', color: '#22c55e' },
+		cancelled: { label: 'Отменён', color: '#ef4444' }
 	};
 
 	onMount(async () => {
@@ -56,22 +56,22 @@
 	{#if loading}
 		<div class="loading">
 			<div class="spinner"></div>
-			<p>Loading order...</p>
+			<p>Загрузка заказа...</p>
 		</div>
 	{:else if error}
 		<div class="error-state">
 			<span class="error-icon">!</span>
-			<h2>Error</h2>
+			<h2>Ошибка</h2>
 			<p>{error}</p>
-			<button onclick={() => goto('/products')}>Continue Shopping</button>
+			<button onclick={() => goto('/products')}>Продолжить покупки</button>
 		</div>
 	{:else if order}
 		<div class="success-content">
 			<!-- Success Header -->
 			<div class="success-header">
 				<div class="success-icon">&#10003;</div>
-				<h1>Order Placed!</h1>
-				<p class="order-number">Order #{order.orderNumber}</p>
+				<h1>Заказ оформлен!</h1>
+				<p class="order-number">Заказ #{order.orderNumber}</p>
 				<p class="order-date">{formatDate(order.createdAt)}</p>
 			</div>
 
@@ -82,7 +82,7 @@
 
 			<!-- Order Details Card -->
 			<div class="details-card">
-				<h2>Order Details</h2>
+				<h2>Детали заказа</h2>
 
 				<!-- Items -->
 				<div class="items-list">
@@ -100,26 +100,26 @@
 				<!-- Totals -->
 				<div class="totals">
 					<div class="total-row">
-						<span>Subtotal</span>
+						<span>Сумма</span>
 						<span>{order.totals.subtotal.toLocaleString('ru-RU')} ₽</span>
 					</div>
 
 					{#if order.totals.deliveryCost > 0}
 						<div class="total-row">
-							<span>Delivery</span>
+							<span>Доставка</span>
 							<span>{order.totals.deliveryCost.toLocaleString('ru-RU')} ₽</span>
 						</div>
 					{/if}
 
 					{#if order.totals.discount > 0}
 						<div class="total-row discount">
-							<span>Discount</span>
+							<span>Скидка</span>
 							<span>-{order.totals.discount.toLocaleString('ru-RU')} ₽</span>
 						</div>
 					{/if}
 
 					<div class="total-row grand-total">
-						<span>Total</span>
+						<span>Итого</span>
 						<span>{order.totals.total.toLocaleString('ru-RU')} ₽</span>
 					</div>
 				</div>
@@ -127,20 +127,20 @@
 
 			<!-- Delivery/Pickup Info -->
 			<div class="details-card">
-				<h2>{order.delivery.type === 'delivery' ? 'Delivery Address' : 'Pickup Point'}</h2>
+				<h2>{order.delivery.type === 'delivery' ? 'Адрес доставки' : 'Точка самовывоза'}</h2>
 
 				{#if order.delivery.type === 'delivery'}
 					<div class="address-info">
 						<p class="main-address">{order.delivery.address}</p>
 						{#if order.delivery.entrance || order.delivery.floor || order.delivery.apartment}
 							<p class="address-details">
-								{#if order.delivery.entrance}Entrance {order.delivery.entrance}{/if}
-								{#if order.delivery.floor}, Floor {order.delivery.floor}{/if}
-								{#if order.delivery.apartment}, Apt. {order.delivery.apartment}{/if}
+								{#if order.delivery.entrance}Подъезд {order.delivery.entrance}{/if}
+								{#if order.delivery.floor}, Этаж {order.delivery.floor}{/if}
+								{#if order.delivery.apartment}, Кв. {order.delivery.apartment}{/if}
 							</p>
 						{/if}
 						{#if order.delivery.intercom}
-							<p class="address-details">Intercom: {order.delivery.intercom}</p>
+							<p class="address-details">Домофон: {order.delivery.intercom}</p>
 						{/if}
 					</div>
 				{:else if order.delivery.store}
@@ -153,10 +153,10 @@
 
 			<!-- Contact Info -->
 			<div class="details-card">
-				<h2>Contact</h2>
+				<h2>Контакты</h2>
 				<div class="contact-info">
-					<p><strong>Name:</strong> {order.customer.name}</p>
-					<p><strong>Phone:</strong> {order.customer.phone}</p>
+					<p><strong>Имя:</strong> {order.customer.name}</p>
+					<p><strong>Телефон:</strong> {order.customer.phone}</p>
 					{#if order.customer.email}
 						<p><strong>Email:</strong> {order.customer.email}</p>
 					{/if}
@@ -166,7 +166,7 @@
 			<!-- Notes -->
 			{#if order.notes}
 				<div class="details-card">
-					<h2>Notes</h2>
+					<h2>Примечания</h2>
 					<p class="notes">{order.notes}</p>
 				</div>
 			{/if}
@@ -174,10 +174,10 @@
 			<!-- Actions -->
 			<div class="actions">
 				<button class="primary-btn" onclick={() => goto('/products')}>
-					Continue Shopping
+					Продолжить покупки
 				</button>
 				<button class="secondary-btn" onclick={() => goto('/')}>
-					Back to Home
+					На главную
 				</button>
 			</div>
 		</div>

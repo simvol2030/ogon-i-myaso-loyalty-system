@@ -12,7 +12,7 @@
 
 	// Form data
 	let customerName = $state('');
-	let customerPhone = $state('');
+	let customerPhone = $state('+7 (9');
 	let customerEmail = $state('');
 	let deliveryType = $state<'pickup' | 'delivery'>('delivery');
 	let deliveryAddress = $state('');
