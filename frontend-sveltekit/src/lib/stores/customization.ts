@@ -112,7 +112,7 @@ const defaultCustomization: CustomizationData = {
 		borderRadius: 24,
 		showShimmer: true
 	},
-	productsLabel: 'Товары',
+	productsLabel: 'Меню',
 	productsIcon: 'cart'
 };
 
