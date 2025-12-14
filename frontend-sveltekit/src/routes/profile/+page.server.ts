@@ -3,6 +3,30 @@ import { db } from '$lib/server/db/client';
 import { loyaltySettings } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
+/**
+ * Склонение слова "балл" в зависимости от числа
+ * @param count - количество
+ * @returns правильная форма слова (балл/балла/баллов)
+ */
+function declinePoints(count: number): string {
+  const lastDigit = count % 10;
+  const lastTwoDigits = count % 100;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return 'Баллов';
+  }
+
+  if (lastDigit === 1) {
+    return 'Балл';
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return 'Балла';
+  }
+
+  return 'Баллов';
+}
+
 export const load: PageServerLoad = async () => {
   // Fetch loyalty settings from DB
   const [settings] = await db.select().from(loyaltySettings).where(eq(loyaltySettings.id, 1)).limit(1);
@@ -77,22 +101,28 @@ export const load: PageServerLoad = async () => {
         id: 'earning',
         emoji: '💰',
         title: 'Начисление бонусов',
-        description: `Получайте <strong>${earningPercent}% от суммы покупки</strong> в виде ${pointsName} за каждую покупку`,
-        example: `Пример: покупка на 1000₽ = ${Math.round(1000 * earningPercent / 100)} ${pointsName}`
+        description: `Получайте <strong>${earningPercent}% от суммы покупки</strong> в виде Баллов за каждую покупку`,
+        example: (() => {
+          const points = Math.round(1000 * earningPercent / 100);
+          return `Пример: покупка на 1000₽ = ${points} ${declinePoints(points)}`;
+        })()
       },
       {
         id: 'payment',
         emoji: '🎯',
         title: 'Оплата бонусами',
-        description: `Оплачивайте до <strong>${maxDiscountPercent}% от суммы чека</strong> накопленными ${pointsName}`,
-        example: `Чек на 500₽ → можно списать до ${Math.round(500 * maxDiscountPercent / 100)} ${pointsName}`
+        description: `Оплачивайте до <strong>${maxDiscountPercent}% от суммы чека</strong> накопленными Баллами`,
+        example: (() => {
+          const points = Math.round(500 * maxDiscountPercent / 100);
+          return `Чек на 500₽ → можно списать до ${points} ${declinePoints(points)}`;
+        })()
       },
       {
         id: 'expiry',
         emoji: '⏱️',
         title: 'Срок действия',
-        description: `${pointsName} действуют <strong>${expiryDays} дней</strong> с момента последней активности`,
-        example: 'Совершайте покупки регулярно, чтобы баллы не сгорели!'
+        description: `Баллы действуют <strong>${expiryDays} дней</strong> с момента последней активности`,
+        example: 'Совершайте покупки регулярно, чтобы Баллы не сгорели!'
       },
       {
         id: 'conditions',
@@ -100,14 +130,14 @@ export const load: PageServerLoad = async () => {
         title: 'Важные условия',
         description: '',
         list: [
-          `Минимальная сумма для списания: <strong>${minRedemption} ${pointsName}</strong>`,
+          `Минимальная сумма для списания: <strong>${minRedemption} ${declinePoints(minRedemption)}</strong>`,
           'Бонусы не начисляются на <strong>акционные товары</strong>',
           'Начисление только при <strong>полной оплате деньгами</strong>',
           'Бонусы нельзя передать другому лицу'
         ]
       }
     ],
-    footer: `✨ Копите ${pointsName} и экономьте на покупках для ваших питомцев!`
+    footer: `✨ Копите Баллы и экономьте на покупках`
   };
 
   return {
