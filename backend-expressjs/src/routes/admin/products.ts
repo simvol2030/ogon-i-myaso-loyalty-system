@@ -313,12 +313,12 @@ router.post('/', requireRole('super-admin', 'editor'), async (req, res) => {
 		if (variations && Array.isArray(variations) && variations.length > 0) {
 			createdVariations = await createVariationsBulk(created.id, variations.map((v: any, index: number) => ({
 				name: v.name,
-				price: v.price,
-				old_price: v.oldPrice,
-				sku: v.sku,
+				price: Number(v.price) || 0,
+				old_price: v.oldPrice != null ? Number(v.oldPrice) : null,
+				sku: v.sku || null,
 				position: v.position ?? index,
-				is_default: v.isDefault ?? (index === 0),
-				is_active: v.isActive ?? true
+				is_default: Boolean(v.isDefault ?? (index === 0)),
+				is_active: v.isActive !== false
 			})));
 		}
 
@@ -413,12 +413,12 @@ router.put('/:id', requireRole('super-admin', 'editor'), async (req, res) => {
 			if (Array.isArray(variations) && variations.length > 0) {
 				updatedVariations = await createVariationsBulk(productId, variations.map((v: any, index: number) => ({
 					name: v.name,
-					price: v.price,
-					old_price: v.oldPrice,
-					sku: v.sku,
+					price: Number(v.price) || 0,
+					old_price: v.oldPrice != null ? Number(v.oldPrice) : null, // Convert undefined to null
+					sku: v.sku || null, // Convert undefined/empty to null
 					position: v.position ?? index,
-					is_default: v.isDefault ?? (index === 0),
-					is_active: v.isActive ?? true
+					is_default: Boolean(v.isDefault ?? (index === 0)),
+					is_active: v.isActive !== false // Default to true
 				})));
 			} else if (Array.isArray(variations) && variations.length === 0) {
 				// Clear all variations if empty array provided

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { cart } from '$lib/stores/cart';
+	import type { Product } from '$lib/types/loyalty';
+	import ProductDetailSheet from '$lib/components/loyalty/ui/ProductDetailSheet.svelte';
 
 	interface CategoryItem {
 		id: number;
@@ -26,6 +28,39 @@
 
 	// Track selected variation per product
 	let selectedVariations = $state<Record<number, number>>({});
+
+	// Product detail sheet state
+	let selectedProduct = $state<Product | null>(null);
+	let productSheetOpen = $state(false);
+
+	const openProductDetail = (product: typeof data.products[0]) => {
+		// Convert to Product type for the detail sheet
+		selectedProduct = {
+			id: product.id,
+			name: product.name,
+			description: product.description || null,
+			price: product.price,
+			oldPrice: product.old_price || undefined,
+			quantityInfo: product.quantity_info || null,
+			image: product.image,
+			category: product.category,
+			variationAttribute: product.variation_attribute || null,
+			variations: product.variations?.map(v => ({
+				id: v.id,
+				name: v.name,
+				price: v.price,
+				oldPrice: v.oldPrice || undefined,
+				sku: v.sku || undefined,
+				isDefault: v.isDefault,
+				isActive: true
+			}))
+		};
+		productSheetOpen = true;
+	};
+
+	const closeProductDetail = () => {
+		productSheetOpen = false;
+	};
 
 	// Категории с новой структурой (slug/name/image)
 	const categoriesNew = data.categories as CategoryItem[];
@@ -165,7 +200,7 @@
 			{@const currentOldPrice = getCurrentOldPrice(product)}
 			{@const selectedVariation = getSelectedVariation(product)}
 			<article class="product-card">
-				<div class="product-image-wrapper">
+				<div class="product-image-wrapper" onclick={() => openProductDetail(product)} role="button" tabindex="0">
 					<img src={product.image} alt={product.name} class="product-image" />
 					{#if currentOldPrice && currentOldPrice > currentPrice}
 						<span class="discount-badge">
@@ -175,7 +210,7 @@
 				</div>
 
 				<div class="product-info">
-					<h3 class="product-name">{product.name}</h3>
+					<h3 class="product-name" onclick={() => openProductDetail(product)} role="button" tabindex="0">{product.name}</h3>
 					<span class="product-category">{product.category}</span>
 
 					{#if product.hasVariations && product.variations.length > 0}
@@ -229,6 +264,13 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Product Detail Sheet -->
+<ProductDetailSheet
+	product={selectedProduct}
+	open={productSheetOpen}
+	onClose={closeProductDetail}
+/>
 
 <style>
 	.products-page {

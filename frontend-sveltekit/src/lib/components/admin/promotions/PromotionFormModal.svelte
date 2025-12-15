@@ -179,16 +179,17 @@
 				savedPromotion = await promotionsAPI.create(formData);
 			}
 
-			// Send broadcast if enabled (only for new promotions)
-			if (sendBroadcast && broadcastMessage && !editingPromotion) {
+			// Send broadcast if enabled (for both new and existing promotions)
+			if (sendBroadcast && broadcastMessage) {
 				try {
-					// Create campaign
+					// Create campaign with promotion link
+					const promotionId = editingPromotion ? editingPromotion.id : savedPromotion.id;
 					const campaign = await campaignsAPI.create({
 						title: `Рассылка: ${formData.title}`,
 						messageText: broadcastMessage,
 						messageImage: formData.image || undefined,
 						buttonText: 'Подробнее',
-						buttonUrl: `/promotions/${savedPromotion.id}`,
+						buttonUrl: `/offers`, // Link to offers page (promotions page in TWA)
 						targetType: 'all',
 						triggerType: 'manual'
 					});
@@ -326,9 +327,8 @@
 			</div>
 		</div>
 
-		<!-- Broadcast Section (only for new promotions) -->
-		{#if !editingPromotion}
-			<div class="broadcast-section">
+		<!-- Broadcast Section (for both new and existing promotions) -->
+		<div class="broadcast-section">
 				<div class="broadcast-header">
 					<label class="broadcast-toggle">
 						<input type="checkbox" bind:checked={sendBroadcast} />
@@ -365,7 +365,6 @@
 					</div>
 				{/if}
 			</div>
-		{/if}
 
 		<!-- Error -->
 		{#if error}

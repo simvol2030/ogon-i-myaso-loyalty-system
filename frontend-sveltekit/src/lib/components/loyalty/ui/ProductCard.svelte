@@ -4,16 +4,21 @@
 
   interface Props {
     product: Product;
+    onclick?: (product: Product) => void;
   }
 
-  let { product }: Props = $props();
+  let { product, onclick }: Props = $props();
 
   const discount = product.oldPrice
     ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
     : 0;
+
+  const handleClick = () => {
+    onclick?.(product);
+  };
 </script>
 
-<div class="product-card">
+<div class="product-card" onclick={handleClick} role="button" tabindex="0" onkeypress={(e) => e.key === 'Enter' && handleClick()}>
   <div class="product-image">
     <img src={product.image} alt={product.name} />
     {#if discount > 0}

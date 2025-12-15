@@ -6,13 +6,27 @@ export interface User {
   totalSaved: number;
 }
 
-export interface Product {
+export interface ProductVariation {
   id: number;
   name: string;
   price: number;
   oldPrice?: number;
+  sku?: string;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+  description?: string | null;
+  price: number;
+  oldPrice?: number;
+  quantityInfo?: string | null;
   image: string;
   category: string;
+  variationAttribute?: string | null;
+  variations?: ProductVariation[];
 }
 
 export interface Store {
