@@ -1,11 +1,26 @@
 <script lang="ts">
+  import type { Product } from '$lib/types/loyalty';
   import LoyaltyCard from '$lib/components/loyalty/ui/LoyaltyCard.svelte';
   import StoriesCarousel from '$lib/components/loyalty/ui/StoriesCarousel.svelte';
   import RecommendationCard from '$lib/components/loyalty/ui/RecommendationCard.svelte';
   import OfferCardCompact from '$lib/components/loyalty/ui/OfferCardCompact.svelte';
   import ProductCard from '$lib/components/loyalty/ui/ProductCard.svelte';
+  import ProductDetailSheet from '$lib/components/loyalty/ui/ProductDetailSheet.svelte';
 
   let { data } = $props();
+
+  // Product detail sheet state
+  let selectedProduct = $state<Product | null>(null);
+  let productSheetOpen = $state(false);
+
+  const openProductDetail = (product: Product) => {
+    selectedProduct = product;
+    productSheetOpen = true;
+  };
+
+  const closeProductDetail = () => {
+    productSheetOpen = false;
+  };
 </script>
 
 <!-- 1. Карта лояльности -->
@@ -42,7 +57,7 @@
   </h2>
   <div class="products-grid">
     {#each data.topProducts as product}
-      <ProductCard {product} />
+      <ProductCard {product} onclick={openProductDetail} />
     {/each}
   </div>
   <a href="/products" class="see-all-link">
@@ -65,6 +80,13 @@
     {/each}
   </div>
 </section>
+
+<!-- Product Detail Sheet -->
+<ProductDetailSheet
+  product={selectedProduct}
+  open={productSheetOpen}
+  onClose={closeProductDetail}
+/>
 
 <style>
   .section-content {
