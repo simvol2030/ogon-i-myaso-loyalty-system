@@ -43,9 +43,10 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
 	// Permissions Policy - отключаем ненужные API браузера
+	// camera=(self) разрешает использование камеры для QR-сканирования в seller интерфейсе
 	response.headers.set(
 		'Permissions-Policy',
-		'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=()'
+		'geolocation=(), microphone=(), camera=(self), payment=(), usb=(), magnetometer=()'
 	);
 
 	// HSTS - заставляем использовать HTTPS (только в production)
