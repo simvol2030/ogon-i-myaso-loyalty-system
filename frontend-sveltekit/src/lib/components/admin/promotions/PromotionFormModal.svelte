@@ -28,6 +28,9 @@
 	let broadcastMessage = $state('');
 	let audienceCount = $state<number | null>(null);
 	let loadingAudience = $state(false);
+	let broadcastSending = $state(false);
+	let broadcastResult = $state<{ success: boolean; sent: number; failed: number; message: string } | null>(null);
+	let savedPromotionId = $state<number | null>(null);
 
 	let imagePreview = $state<string | null>(null);
 	let loading = $state(false);
@@ -45,9 +48,11 @@
 				showOnHome: editingPromotion.showOnHome
 			};
 			imagePreview = editingPromotion.image; // Also string | null
+			savedPromotionId = editingPromotion.id;
 			// Reset broadcast for editing (don't auto-send for existing)
 			sendBroadcast = false;
 			broadcastMessage = '';
+			broadcastResult = null;
 		} else if (isOpen && !editingPromotion) {
 			formData = {
 				title: '',
@@ -58,9 +63,11 @@
 				showOnHome: false
 			};
 			imagePreview = null;
+			savedPromotionId = null;
 			// Reset broadcast
 			sendBroadcast = false;
 			broadcastMessage = '';
+			broadcastResult = null;
 		}
 	});
 
@@ -179,36 +186,63 @@
 				savedPromotion = await promotionsAPI.create(formData);
 			}
 
-			// Send broadcast if enabled (for both new and existing promotions)
-			if (sendBroadcast && broadcastMessage) {
-				try {
-					// Create campaign with promotion link
-					const promotionId = editingPromotion ? editingPromotion.id : savedPromotion.id;
-					const campaign = await campaignsAPI.create({
-						title: `Рассылка: ${formData.title}`,
-						messageText: broadcastMessage,
-						messageImage: formData.image || undefined,
-						buttonText: 'Подробнее',
-						buttonUrl: `/offers`, // Link to offers page (promotions page in TWA)
-						targetType: 'all',
-						triggerType: 'manual'
-					});
-
-					// Send immediately
-					await campaignsAPI.send(campaign.id);
-				} catch (broadcastErr: any) {
-					console.error('Broadcast error:', broadcastErr);
-					// Don't fail the whole operation, just log the error
-					// Promotion was saved successfully
-				}
-			}
+			// Save the promotion ID for broadcast
+			savedPromotionId = savedPromotion.id;
 
 			onSuccess?.();
-			onClose();
+
+			// If broadcast is enabled, don't close modal - let user send broadcast
+			if (!sendBroadcast) {
+				onClose();
+			}
 		} catch (err: any) {
 			error = err.message || 'Ошибка при сохранении акции';
 		} finally {
 			loading = false;
+		}
+	};
+
+	const handleSendBroadcast = async () => {
+		if (!savedPromotionId || !broadcastMessage) {
+			error = 'Сначала сохраните акцию';
+			return;
+		}
+
+		broadcastSending = true;
+		broadcastResult = null;
+		error = null;
+
+		try {
+			// Create campaign with promotion link
+			const campaign = await campaignsAPI.create({
+				title: `Рассылка: ${formData.title}`,
+				messageText: broadcastMessage,
+				messageImage: formData.image || undefined,
+				buttonText: 'Подробнее',
+				buttonUrl: `/offers`, // Link to offers page (promotions page in TWA)
+				targetType: 'all',
+				triggerType: 'manual'
+			});
+
+			// Send immediately and get result
+			const result = await campaignsAPI.send(campaign.id);
+
+			broadcastResult = {
+				success: true,
+				sent: result.sent || audienceCount || 0,
+				failed: result.failed || 0,
+				message: `Рассылка успешно отправлена!`
+			};
+		} catch (broadcastErr: any) {
+			console.error('Broadcast error:', broadcastErr);
+			broadcastResult = {
+				success: false,
+				sent: 0,
+				failed: audienceCount || 0,
+				message: broadcastErr.message || 'Ошибка при отправке рассылки'
+			};
+		} finally {
+			broadcastSending = false;
 		}
 	};
 
@@ -360,6 +394,61 @@
 						{#if formData.image}
 							<div class="broadcast-preview">
 								<span class="preview-label">🖼️ Изображение акции будет приложено к рассылке</span>
+							</div>
+						{/if}
+
+						<!-- Send Broadcast Button -->
+						<div class="broadcast-actions">
+							{#if !broadcastResult?.success}
+								<button
+									type="button"
+									class="send-broadcast-btn"
+									onclick={handleSendBroadcast}
+									disabled={broadcastSending || !savedPromotionId || !broadcastMessage}
+								>
+									{#if broadcastSending}
+										<span class="spinner"></span>
+										Отправка...
+									{:else if !savedPromotionId}
+										Сначала сохраните акцию
+									{:else}
+										📣 Отправить рассылку
+									{/if}
+								</button>
+							{/if}
+
+							{#if !savedPromotionId && !editingPromotion}
+								<small class="broadcast-save-hint">⚠️ Сначала сохраните акцию, затем отправьте рассылку</small>
+							{/if}
+						</div>
+
+						<!-- Broadcast Result Log -->
+						{#if broadcastResult}
+							<div class="broadcast-result" class:success={broadcastResult.success} class:error={!broadcastResult.success}>
+								<div class="result-header">
+									{#if broadcastResult.success}
+										✅ {broadcastResult.message}
+									{:else}
+										❌ {broadcastResult.message}
+									{/if}
+								</div>
+								<div class="result-stats">
+									<span class="stat">
+										<span class="stat-value">{broadcastResult.sent}</span>
+										<span class="stat-label">отправлено</span>
+									</span>
+									{#if broadcastResult.failed > 0}
+										<span class="stat error">
+											<span class="stat-value">{broadcastResult.failed}</span>
+											<span class="stat-label">ошибок</span>
+										</span>
+									{/if}
+								</div>
+								{#if broadcastResult.success}
+									<button type="button" class="close-modal-btn" onclick={onClose}>
+										Закрыть
+									</button>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -617,5 +706,141 @@
 	.preview-label {
 		color: #0369a1;
 		font-size: 0.875rem;
+	}
+
+	/* Broadcast Actions */
+	.broadcast-actions {
+		margin-top: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.send-broadcast-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.875rem 1.5rem;
+		background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+		color: white;
+		border: none;
+		border-radius: 0.5rem;
+		font-size: 1rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.send-broadcast-btn:hover:not(:disabled) {
+		background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+		transform: translateY(-1px);
+		box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
+	}
+
+	.send-broadcast-btn:disabled {
+		background: #9ca3af;
+		cursor: not-allowed;
+		opacity: 0.7;
+	}
+
+	.broadcast-save-hint {
+		display: block;
+		color: #b45309;
+		font-size: 0.8rem;
+		text-align: center;
+	}
+
+	/* Broadcast Result */
+	.broadcast-result {
+		margin-top: 1rem;
+		padding: 1rem;
+		border-radius: 0.5rem;
+		border: 1px solid;
+	}
+
+	.broadcast-result.success {
+		background: #ecfdf5;
+		border-color: #10b981;
+	}
+
+	.broadcast-result.error {
+		background: #fef2f2;
+		border-color: #ef4444;
+	}
+
+	.result-header {
+		font-size: 1rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+	}
+
+	.broadcast-result.success .result-header {
+		color: #059669;
+	}
+
+	.broadcast-result.error .result-header {
+		color: #dc2626;
+	}
+
+	.result-stats {
+		display: flex;
+		gap: 1.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.stat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.stat-value {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #059669;
+	}
+
+	.stat.error .stat-value {
+		color: #dc2626;
+	}
+
+	.stat-label {
+		font-size: 0.75rem;
+		color: #6b7280;
+		text-transform: uppercase;
+	}
+
+	.close-modal-btn {
+		width: 100%;
+		padding: 0.75rem 1rem;
+		background: #10b981;
+		color: white;
+		border: none;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.2s;
+	}
+
+	.close-modal-btn:hover {
+		background: #059669;
+	}
+
+	/* Spinner */
+	.spinner {
+		width: 1rem;
+		height: 1rem;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>

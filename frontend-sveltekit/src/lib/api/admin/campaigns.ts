@@ -142,11 +142,11 @@ export const campaignsAPI = {
 	/**
 	 * Запустить отправку кампании
 	 */
-	async send(id: number) {
+	async send(id: number): Promise<{ sent: number; failed: number; total: number }> {
 		const data = await fetchWithSession(`${API_BASE_URL}/admin/campaigns/${id}/send`, {
 			method: 'POST'
 		});
-		return data;
+		return data.data as { sent: number; failed: number; total: number };
 	},
 
 	/**

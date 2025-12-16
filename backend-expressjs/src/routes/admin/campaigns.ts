@@ -495,9 +495,19 @@ router.post('/:id/send', requireRole('super-admin', 'editor'), async (req, res) 
 			return res.status(400).json({ success: false, error: result.error });
 		}
 
+		// Get campaign stats after sending
+		const campaign = await getCampaignById(campaignId);
+		const sent = campaign?.delivered_count || 0;
+		const failed = campaign?.failed_count || 0;
+
 		res.json({
 			success: true,
-			message: 'Рассылка запущена'
+			message: 'Рассылка завершена',
+			data: {
+				sent,
+				failed,
+				total: campaign?.total_recipients || 0
+			}
 		});
 	} catch (error: any) {
 		console.error('Error starting campaign:', error);

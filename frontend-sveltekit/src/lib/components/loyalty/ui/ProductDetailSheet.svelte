@@ -17,6 +17,7 @@
 	let touchStartY = $state(0);
 	let touchCurrentY = $state(0);
 	let isDragging = $state(false);
+	let scrollableRef = $state<HTMLElement | null>(null);
 
 	// Reset state when product changes
 	$effect(() => {
@@ -68,16 +69,31 @@
 		}
 	};
 
-	// Touch handlers for swipe-to-dismiss
+	// Touch handlers for swipe-to-dismiss (only when at top of scroll)
 	const handleTouchStart = (e: TouchEvent) => {
-		touchStartY = e.touches[0].clientY;
-		touchCurrentY = touchStartY;
-		isDragging = true;
+		// Only enable drag if scrolled to top
+		if (scrollableRef && scrollableRef.scrollTop <= 0) {
+			touchStartY = e.touches[0].clientY;
+			touchCurrentY = touchStartY;
+			isDragging = true;
+		}
 	};
 
 	const handleTouchMove = (e: TouchEvent) => {
 		if (!isDragging) return;
-		touchCurrentY = e.touches[0].clientY;
+
+		const currentY = e.touches[0].clientY;
+		const delta = currentY - touchStartY;
+
+		// Only allow dragging down
+		if (delta > 0) {
+			touchCurrentY = currentY;
+			// Prevent scroll while dragging down
+			e.preventDefault();
+		} else {
+			// User is scrolling up, cancel drag
+			isDragging = false;
+		}
 	};
 
 	const handleTouchEnd = () => {
@@ -102,71 +118,82 @@
 		<div
 			class="product-sheet"
 			style:transform={dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined}
-			ontouchstart={handleTouchStart}
-			ontouchmove={handleTouchMove}
-			ontouchend={handleTouchEnd}
 		>
-			<!-- Drag handle -->
-			<div class="drag-handle">
+			<!-- Drag handle (for swipe to dismiss) -->
+			<div
+				class="drag-handle"
+				ontouchstart={handleTouchStart}
+				ontouchmove={handleTouchMove}
+				ontouchend={handleTouchEnd}
+			>
 				<div class="handle-bar"></div>
 			</div>
 
-			<!-- Close button -->
+			<!-- Close button (floating) -->
 			<button class="close-btn" onclick={onClose} aria-label="Закрыть">
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
 				</svg>
 			</button>
 
-			<!-- Product image -->
-			<div class="product-image">
-				<img src={product.image} alt={product.name} />
-				{#if discount > 0}
-					<div class="discount-badge">-{discount}%</div>
-				{/if}
-			</div>
-
-			<!-- Product info -->
-			<div class="product-content">
-				<div class="product-category">{product.category}</div>
-				<h2 class="product-name">{product.name}</h2>
-
-				{#if product.quantityInfo}
-					<div class="product-quantity-info">{product.quantityInfo}</div>
-				{/if}
-
-				{#if product.description}
-					<p class="product-description">{product.description}</p>
-				{/if}
-
-				<!-- Variations selector -->
-				{#if product.variations && product.variations.length > 0 && product.variationAttribute}
-					<div class="variations-section">
-						<div class="variations-label">{product.variationAttribute}:</div>
-						<div class="variations-list">
-							{#each product.variations.filter(v => v.isActive) as variation (variation.id)}
-								<button
-									class="variation-btn"
-									class:selected={selectedVariation?.id === variation.id}
-									onclick={() => selectedVariation = variation}
-								>
-									{variation.name}
-								</button>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				<!-- Pricing -->
-				<div class="product-pricing">
-					<span class="current-price">{formatNumber(currentPrice)} ₽</span>
-					{#if currentOldPrice && currentOldPrice > currentPrice}
-						<span class="old-price">{formatNumber(currentOldPrice)} ₽</span>
+			<!-- Scrollable content (image + info) -->
+			<div
+				class="scrollable-content"
+				bind:this={scrollableRef}
+				ontouchstart={handleTouchStart}
+				ontouchmove={handleTouchMove}
+				ontouchend={handleTouchEnd}
+			>
+				<!-- Product image -->
+				<div class="product-image">
+					<img src={product.image} alt={product.name} />
+					{#if discount > 0}
+						<div class="discount-badge">-{discount}%</div>
 					{/if}
+				</div>
+
+				<!-- Product info -->
+				<div class="product-content">
+					<div class="product-category">{product.category}</div>
+					<h2 class="product-name">{product.name}</h2>
+
+					{#if product.quantityInfo}
+						<div class="product-quantity-info">{product.quantityInfo}</div>
+					{/if}
+
+					{#if product.description}
+						<p class="product-description">{product.description}</p>
+					{/if}
+
+					<!-- Variations selector -->
+					{#if product.variations && product.variations.length > 0 && product.variationAttribute}
+						<div class="variations-section">
+							<div class="variations-label">{product.variationAttribute}:</div>
+							<div class="variations-list">
+								{#each product.variations.filter(v => v.isActive) as variation (variation.id)}
+									<button
+										class="variation-btn"
+										class:selected={selectedVariation?.id === variation.id}
+										onclick={() => selectedVariation = variation}
+									>
+										{variation.name}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					<!-- Pricing -->
+					<div class="product-pricing">
+						<span class="current-price">{formatNumber(currentPrice)} ₽</span>
+						{#if currentOldPrice && currentOldPrice > currentPrice}
+							<span class="old-price">{formatNumber(currentOldPrice)} ₽</span>
+						{/if}
+					</div>
 				</div>
 			</div>
 
-			<!-- Footer with quantity and add to cart -->
+			<!-- Footer with quantity and add to cart (sticky) -->
 			<div class="sheet-footer">
 				<div class="quantity-selector">
 					<button
@@ -239,6 +266,9 @@
 		display: flex;
 		justify-content: center;
 		cursor: grab;
+		flex-shrink: 0;
+		background: var(--bg-white);
+		border-radius: 24px 24px 0 0;
 	}
 
 	.handle-bar {
@@ -250,12 +280,12 @@
 
 	.close-btn {
 		position: absolute;
-		top: 16px;
+		top: 56px; /* Below drag handle */
 		right: 16px;
 		width: 36px;
 		height: 36px;
 		border-radius: 50%;
-		background: rgba(0, 0, 0, 0.3);
+		background: rgba(0, 0, 0, 0.4);
 		border: none;
 		display: flex;
 		align-items: center;
@@ -266,7 +296,7 @@
 	}
 
 	.close-btn:hover {
-		background: rgba(0, 0, 0, 0.5);
+		background: rgba(0, 0, 0, 0.6);
 	}
 
 	.close-btn svg {
@@ -275,9 +305,18 @@
 		color: white;
 	}
 
+	/* Scrollable area containing both image and content */
+	.scrollable-content {
+		flex: 1;
+		overflow-y: auto;
+		overflow-x: hidden;
+		-webkit-overflow-scrolling: touch;
+	}
+
 	.product-image {
 		width: 100%;
-		height: 280px;
+		aspect-ratio: 1 / 1;
+		max-height: 320px;
 		background: var(--bg-light);
 		position: relative;
 		overflow: hidden;
@@ -302,9 +341,7 @@
 	}
 
 	.product-content {
-		flex: 1;
 		padding: 20px;
-		overflow-y: auto;
 	}
 
 	.product-category {
@@ -332,8 +369,9 @@
 	.product-description {
 		font-size: 15px;
 		color: var(--text-secondary);
-		line-height: 1.5;
+		line-height: 1.6;
 		margin: 0 0 16px;
+		white-space: pre-wrap;
 	}
 
 	.variations-section {
@@ -380,6 +418,7 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
+		padding-bottom: 8px;
 	}
 
 	.current-price {
@@ -402,6 +441,7 @@
 		display: flex;
 		gap: 12px;
 		align-items: center;
+		flex-shrink: 0;
 	}
 
 	.quantity-selector {
@@ -496,7 +536,7 @@
 
 	@media (max-width: 480px) {
 		.product-image {
-			height: 240px;
+			max-height: 280px;
 		}
 
 		.product-name {

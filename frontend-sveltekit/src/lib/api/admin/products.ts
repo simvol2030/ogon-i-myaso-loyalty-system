@@ -140,6 +140,35 @@ export const productsAPI = {
 	 */
 	getTemplateUrl(format: 'csv' | 'json' = 'csv'): string {
 		return `${API_BASE_URL}/admin/products/import/template?format=${format}`;
+	},
+
+	/**
+	 * Upload ZIP archive with images
+	 * Returns mapping of filenames to URLs
+	 */
+	async uploadImagesZip(file: File): Promise<ZipUploadResult> {
+		const formData = new FormData();
+		formData.append('file', file);
+
+		const response = await fetch(`${API_BASE_URL}/admin/products/import-zip`, {
+			method: 'POST',
+			body: formData,
+			credentials: 'include'
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			try {
+				const json = JSON.parse(errorText);
+				throw new Error(json.error || 'ZIP upload failed');
+			} catch {
+				throw new Error(`ZIP upload failed: ${response.status}`);
+			}
+		}
+
+		const json = await response.json();
+		if (!json.success) throw new Error(json.error || 'Unknown error');
+		return json.data as ZipUploadResult;
 	}
 };
 
@@ -148,5 +177,12 @@ export interface ImportResult {
 	created: number;
 	updated: number;
 	skipped: number;
+	errors: string[];
+}
+
+export interface ZipUploadResult {
+	total: number;
+	processed: number;
+	images: { filename: string; url: string }[];
 	errors: string[];
 }
