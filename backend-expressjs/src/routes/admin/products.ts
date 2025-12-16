@@ -605,6 +605,149 @@ function parseNumber(value: any): number | null {
 	return isNaN(num) ? null : num;
 }
 
+// Helper: Generate slug from name
+function generateSlug(name: string): string {
+	const translitMap: Record<string, string> = {
+		'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+		'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+		'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+		'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+		'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+	};
+
+	return name
+		.toLowerCase()
+		.split('')
+		.map(char => translitMap[char] || char)
+		.join('')
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '')
+		.substring(0, 100);
+}
+
+// Cache for categories during import (to avoid duplicate queries)
+const categoryCache = new Map<string, number>();
+
+// Helper: Find or create category by path (supports hierarchy with ">" separator)
+// Examples:
+// - "Вина" -> creates/finds "Вина" category
+// - "Напитки > Вина" -> creates/finds "Напитки", then creates/finds "Вина" under it
+// - "Напитки > Алкоголь > Вина" -> creates full hierarchy
+async function findOrCreateCategoryByPath(categoryPath: string): Promise<{ categoryId: number; categoryName: string }> {
+	const parts = categoryPath.split('>').map(p => p.trim()).filter(p => p.length > 0);
+
+	if (parts.length === 0) {
+		// Return default category
+		const defaultName = 'Без категории';
+		const cacheKey = defaultName.toLowerCase();
+
+		if (categoryCache.has(cacheKey)) {
+			return { categoryId: categoryCache.get(cacheKey)!, categoryName: defaultName };
+		}
+
+		// Find or create default category
+		const existing = await db
+			.select({ id: categories.id })
+			.from(categories)
+			.where(eq(categories.name, defaultName))
+			.limit(1);
+
+		if (existing.length > 0) {
+			categoryCache.set(cacheKey, existing[0].id);
+			return { categoryId: existing[0].id, categoryName: defaultName };
+		}
+
+		const slug = generateSlug(defaultName) + '-' + Date.now();
+		const [created] = await db
+			.insert(categories)
+			.values({
+				name: defaultName,
+				slug: slug,
+				parent_id: null,
+				position: 0,
+				is_active: true
+			})
+			.returning({ id: categories.id });
+
+		categoryCache.set(cacheKey, created.id);
+		return { categoryId: created.id, categoryName: defaultName };
+	}
+
+	let parentId: number | null = null;
+	let finalCategoryId: number = 0;
+	let finalCategoryName: string = parts[parts.length - 1];
+
+	// Process each level of hierarchy
+	for (let i = 0; i < parts.length; i++) {
+		const name: string = parts[i];
+		const cacheKey: string = (parentId ? `${parentId}:` : '') + name.toLowerCase();
+
+		// Check cache first
+		if (categoryCache.has(cacheKey)) {
+			parentId = categoryCache.get(cacheKey)!;
+			finalCategoryId = parentId;
+			continue;
+		}
+
+		// Find existing category with same name and parent
+		const existing = await db
+			.select({ id: categories.id })
+			.from(categories)
+			.where(
+				parentId
+					? and(eq(categories.name, name), eq(categories.parent_id, parentId))
+					: and(eq(categories.name, name), sql`${categories.parent_id} IS NULL`)
+			)
+			.limit(1);
+
+		if (existing.length > 0) {
+			categoryCache.set(cacheKey, existing[0].id);
+			parentId = existing[0].id;
+			finalCategoryId = existing[0].id;
+		} else {
+			// Create new category
+			const baseSlug = generateSlug(name);
+			let slug = baseSlug;
+
+			// Ensure unique slug
+			const existingSlugs = await db
+				.select({ slug: categories.slug })
+				.from(categories)
+				.where(like(categories.slug, `${baseSlug}%`));
+
+			const existingSlugSet = new Set(existingSlugs.map(s => s.slug));
+			let counter = 1;
+			while (existingSlugSet.has(slug)) {
+				slug = `${baseSlug}-${counter}`;
+				counter++;
+			}
+
+			const insertResult: { id: number }[] = await db
+				.insert(categories)
+				.values({
+					name: name,
+					slug: slug,
+					parent_id: parentId,
+					position: 0,
+					is_active: true
+				})
+				.returning({ id: categories.id }) as { id: number }[];
+			const createdId: number = insertResult[0].id;
+
+			categoryCache.set(cacheKey, createdId);
+			parentId = createdId;
+			finalCategoryId = createdId;
+		}
+	}
+
+	return { categoryId: finalCategoryId, categoryName: finalCategoryName };
+}
+
+// Helper: Clear category cache (call after import to free memory)
+function clearCategoryCache() {
+	categoryCache.clear();
+}
+
 // Helper: Parse variations from CSV/JSON string
 // Supports formats:
 // 1. JSON array: '[{"name":"25см","price":250},{"name":"30см","price":350}]'
@@ -770,8 +913,9 @@ router.post('/import', requireRole('super-admin', 'editor'), importUpload.single
 					continue;
 				}
 
-				// Apply defaults
-				const category = normalized.category || defaultCategory || 'Без категории';
+				// Apply defaults and auto-create category
+				const categoryPath = normalized.category || defaultCategory || '';
+				const { categoryId, categoryName } = await findOrCreateCategoryByPath(categoryPath);
 				const image = normalized.image || defaultImage || '/api/uploads/products/placeholder.webp';
 
 				const productData = {
@@ -781,8 +925,8 @@ router.post('/import', requireRole('super-admin', 'editor'), importUpload.single
 					old_price: normalized.oldPrice,
 					quantity_info: normalized.quantityInfo,
 					image: image,
-					category: category,
-					category_id: normalized.categoryId,
+					category: categoryName,
+					category_id: categoryId,
 					sku: normalized.sku,
 					position: normalized.position || 0,
 					is_active: normalized.isActive,
@@ -841,6 +985,9 @@ router.post('/import', requireRole('super-admin', 'editor'), importUpload.single
 			}
 		}
 
+		// Clear category cache after import
+		clearCategoryCache();
+
 		res.json({
 			success: true,
 			data: {
@@ -854,6 +1001,7 @@ router.post('/import', requireRole('super-admin', 'editor'), importUpload.single
 		});
 
 	} catch (error: any) {
+		clearCategoryCache();
 		console.error('Error importing products:', error);
 		res.status(500).json({ success: false, error: error.message || 'Internal server error' });
 	}
@@ -865,6 +1013,11 @@ router.post('/import', requireRole('super-admin', 'editor'), importUpload.single
  * Variations formats supported:
  * - JSON array: '[{"name":"25см","price":250},{"name":"30см","price":350}]'
  * - Pipe-separated: "25см:250|30см:350" or "25см:250:200|30см:350" (with oldPrice)
+ *
+ * Category hierarchy:
+ * - Use ">" separator for nested categories: "Напитки > Вина > Красные"
+ * - Categories are auto-created if they don't exist
+ * - Parent categories are created automatically
  */
 router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) => {
 	const format = req.query.format as string || 'csv';
@@ -889,7 +1042,7 @@ router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) 
 				description: 'Классическая пицца с томатами и моцареллой',
 				price: 450.00,
 				image: '/api/uploads/products/pizza.webp',
-				category: 'Пицца',
+				category: 'Еда > Пицца',
 				sku: 'PIZZA-001',
 				isActive: true,
 				showOnHome: true,
@@ -900,6 +1053,15 @@ router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) 
 					{ name: '30 см', price: 450 },
 					{ name: '35 см', price: 550, oldPrice: 600 }
 				]
+			},
+			{
+				name: 'Каберне Совиньон',
+				description: 'Красное сухое вино',
+				price: 1200.00,
+				oldPrice: 1500.00,
+				category: 'Напитки > Вина > Красные',
+				sku: 'WINE-001',
+				isActive: true
 			}
 		];
 
@@ -907,11 +1069,12 @@ router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) 
 		res.setHeader('Content-Disposition', 'attachment; filename=import_template.json');
 		res.send(JSON.stringify(template, null, 2));
 	} else {
-		// CSV format with variations examples
+		// CSV format with variations and category hierarchy examples
 		const csvContent = `name,description,price,oldPrice,quantityInfo,image,category,sku,isActive,showOnHome,isRecommendation,variationAttribute,variations
 "Товар без вариаций","Описание товара",100.00,120.00,"100г","/api/uploads/products/example.webp","Категория","SKU-001",true,false,false,,
-"Пицца Маргарита","Классическая пицца",450.00,,,"","Пицца","PIZZA-001",true,true,false,"Размер","25 см:350|30 см:450|35 см:550:600"
-"Кофе Латте","Классический латте",200.00,,,,"Напитки","COFFEE-001",true,false,false,"Объём","250мл:150|350мл:200|500мл:280"`;
+"Пицца Маргарита","Классическая пицца",450.00,,,"","Еда > Пицца","PIZZA-001",true,true,false,"Размер","25 см:350|30 см:450|35 см:550:600"
+"Кофе Латте","Классический латте",200.00,,,,"Напитки > Кофе","COFFEE-001",true,false,false,"Объём","250мл:150|350мл:200|500мл:280"
+"Каберне Совиньон","Красное сухое вино",1200.00,1500.00,,,"Напитки > Вина > Красные","WINE-001",true,false,false,,`;
 
 		res.setHeader('Content-Type', 'text/csv; charset=utf-8');
 		res.setHeader('Content-Disposition', 'attachment; filename=import_template.csv');
@@ -1076,8 +1239,9 @@ router.post('/import-zip', requireRole('super-admin', 'editor'), zipImportUpload
 					}
 				}
 
-				// Apply defaults
-				const category = normalized.category || defaultCategory || 'Без категории';
+				// Apply defaults and auto-create category
+				const categoryPath = normalized.category || defaultCategory || '';
+				const { categoryId, categoryName } = await findOrCreateCategoryByPath(categoryPath);
 				const image = imageUrl || '/api/uploads/products/placeholder.webp';
 
 				const productData = {
@@ -1087,8 +1251,8 @@ router.post('/import-zip', requireRole('super-admin', 'editor'), zipImportUpload
 					old_price: normalized.oldPrice,
 					quantity_info: normalized.quantityInfo,
 					image: image,
-					category: category,
-					category_id: normalized.categoryId,
+					category: categoryName,
+					category_id: categoryId,
 					sku: normalized.sku,
 					position: normalized.position || 0,
 					is_active: normalized.isActive,
@@ -1140,6 +1304,9 @@ router.post('/import-zip', requireRole('super-admin', 'editor'), zipImportUpload
 			}
 		}
 
+		// Clear category cache after import
+		clearCategoryCache();
+
 		res.json({
 			success: true,
 			data: {
@@ -1154,6 +1321,7 @@ router.post('/import-zip', requireRole('super-admin', 'editor'), zipImportUpload
 		});
 
 	} catch (error: any) {
+		clearCategoryCache();
 		console.error('Error importing ZIP:', error);
 		res.status(500).json({ success: false, error: error.message || 'Internal server error' });
 	}
