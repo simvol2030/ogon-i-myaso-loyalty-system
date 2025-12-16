@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import type { StoryItem, StoriesSettings } from '$lib/types/stories';
 	import { storiesAPI } from '$lib/api/admin/stories';
@@ -47,11 +47,6 @@
 	// Drag & Drop
 	let draggedItem = $state<StoryItem | null>(null);
 	let dragOverId = $state<number | null>(null);
-
-	// Error handling
-	if (data.error) {
-		goto('/stories');
-	}
 
 	// =====================================================
 	// HIGHLIGHT HANDLERS

@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { redirect } from '@sveltejs/kit';
 
 const API_BASE_URL = process.env.BACKEND_URL || 'http://localhost:3012';
 
@@ -27,12 +28,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		const analyticsData = analyticsResponse.ok ? await analyticsResponse.json() : { success: false };
 
 		if (!highlightData.success) {
-			return {
-				highlight: null,
-				settings: null,
-				analytics: null,
-				error: 'Хайлайт не найден'
-			};
+			throw redirect(302, '/stories');
 		}
 
 		return {
@@ -43,11 +39,6 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		};
 	} catch (error) {
 		console.error('[Stories Admin] Failed to fetch highlight:', error);
-		return {
-			highlight: null,
-			settings: null,
-			analytics: null,
-			error: 'Ошибка загрузки данных'
-		};
+		throw redirect(302, '/stories');
 	}
 };
