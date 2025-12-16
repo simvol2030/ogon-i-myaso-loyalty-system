@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onMount, setContext } from 'svelte';
+  import { get } from 'svelte/store';
   import { page } from '$app/stores';
   import { initTheme } from '$lib/stores/loyalty';
   import { loadCustomization, customization, applyCustomStyles, appName, colors } from '$lib/stores/customization';
+  import type { CustomizationData } from '$lib/stores/customization';
   import Header from '$lib/components/loyalty/layout/Header.svelte';
   import BottomNav from '$lib/components/loyalty/layout/BottomNav.svelte';
   import MobileMenu from '$lib/components/loyalty/layout/MobileMenu.svelte';
@@ -15,10 +17,24 @@
   let { children, data } = $props();
 
   // BUG FIX: Initialize customization immediately from server data to prevent logo flashing
+  // IMPORTANT: Merge server data with defaults because server may not include all fields (navigation, loyaltyCard, etc.)
   // This runs BEFORE first render, unlike onMount which runs after
   if (data.customization && typeof window !== 'undefined') {
-    customization.set(data.customization);
-    applyCustomStyles(data.customization);
+    const defaultCustomization = get(customization); // Get current defaults
+    const mergedData: Partial<CustomizationData> = {
+      ...defaultCustomization,
+      ...data.customization,
+      // Deep merge nested objects to preserve defaults for missing fields
+      colors: { ...defaultCustomization.colors, ...(data.customization.colors || {}) },
+      darkTheme: { ...defaultCustomization.darkTheme, ...(data.customization.darkTheme || {}) },
+      navigation: {
+        bottomNav: data.customization.navigation?.bottomNav || defaultCustomization.navigation.bottomNav,
+        sidebarMenu: data.customization.navigation?.sidebarMenu || defaultCustomization.navigation.sidebarMenu
+      },
+      loyaltyCard: { ...defaultCustomization.loyaltyCard, ...(data.customization.loyaltyCard || {}) }
+    };
+    customization.set(mergedData as CustomizationData);
+    applyCustomStyles(mergedData as CustomizationData);
   }
 
   // Check if current route is loyalty app (not admin routes or cashier)
