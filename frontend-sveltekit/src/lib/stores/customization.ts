@@ -137,25 +137,25 @@ export const customizationLoaded = writable<boolean>(false);
 export const customizationError = writable<string | null>(null);
 
 // Derived stores for convenience
-export const appName = derived(customization, $c => $c.appName);
-export const appSlogan = derived(customization, $c => $c.appSlogan);
-export const logoUrl = derived(customization, $c => $c.logoUrl);
-export const colors = derived(customization, $c => $c.colors);
-export const darkTheme = derived(customization, $c => $c.darkTheme);
+export const appName = derived(customization, $c => $c?.appName || defaultCustomization.appName);
+export const appSlogan = derived(customization, $c => $c?.appSlogan || defaultCustomization.appSlogan);
+export const logoUrl = derived(customization, $c => $c?.logoUrl || defaultCustomization.logoUrl);
+export const colors = derived(customization, $c => $c?.colors || defaultCustomization.colors);
+export const darkTheme = derived(customization, $c => $c?.darkTheme || defaultCustomization.darkTheme);
 export const bottomNavItems = derived(customization, $c =>
-	$c.navigation.bottomNav.filter(item => item.visible).map(item =>
-		item.id === 'products' ? { ...item, label: $c.productsLabel, icon: $c.productsIcon } : item
+	($c?.navigation?.bottomNav || []).filter(item => item.visible).map(item =>
+		item.id === 'products' ? { ...item, label: $c?.productsLabel || defaultCustomization.productsLabel, icon: $c?.productsIcon || defaultCustomization.productsIcon } : item
 	)
 );
 export const sidebarMenuItems = derived(customization, $c =>
-	$c.navigation.sidebarMenu.filter(item => item.visible).map(item =>
-		item.id === 'products' ? { ...item, label: $c.productsLabel } : item
+	($c?.navigation?.sidebarMenu || []).filter(item => item.visible).map(item =>
+		item.id === 'products' ? { ...item, label: $c?.productsLabel || defaultCustomization.productsLabel } : item
 	)
 );
-export const productsLabel = derived(customization, $c => $c.productsLabel);
-export const productsIcon = derived(customization, $c => $c.productsIcon);
+export const productsLabel = derived(customization, $c => $c?.productsLabel || defaultCustomization.productsLabel);
+export const productsIcon = derived(customization, $c => $c?.productsIcon || defaultCustomization.productsIcon);
 // BUG-3 FIX: Add fallback for loyaltyCard if undefined (defensive programming)
-export const loyaltyCardSettings = derived(customization, $c => $c.loyaltyCard || defaultCustomization.loyaltyCard);
+export const loyaltyCardSettings = derived(customization, $c => $c?.loyaltyCard || defaultCustomization.loyaltyCard);
 
 /**
  * Load customization settings from API
