@@ -18,23 +18,28 @@
 
   // BUG FIX: Initialize customization immediately from server data to prevent logo flashing
   // IMPORTANT: Merge server data with defaults because server may not include all fields (navigation, loyaltyCard, etc.)
+  // Only overwrite fields that are actually present in server data, preserve defaults for missing fields
   // This runs BEFORE first render, unlike onMount which runs after
   if (data.customization && typeof window !== 'undefined') {
     const defaultCustomization = get(customization); // Get current defaults
-    const mergedData: Partial<CustomizationData> = {
+    const serverData = data.customization as Partial<CustomizationData>;
+    const mergedData: CustomizationData = {
       ...defaultCustomization,
-      ...data.customization,
-      // Deep merge nested objects to preserve defaults for missing fields
-      colors: { ...defaultCustomization.colors, ...(data.customization.colors || {}) },
-      darkTheme: { ...defaultCustomization.darkTheme, ...(data.customization.darkTheme || {}) },
-      navigation: {
-        bottomNav: data.customization.navigation?.bottomNav || defaultCustomization.navigation.bottomNav,
-        sidebarMenu: data.customization.navigation?.sidebarMenu || defaultCustomization.navigation.sidebarMenu
-      },
-      loyaltyCard: { ...defaultCustomization.loyaltyCard, ...(data.customization.loyaltyCard || {}) }
+      // Only include server fields that exist (not undefined)
+      ...(serverData.appName !== undefined && { appName: serverData.appName }),
+      ...(serverData.appSlogan !== undefined && { appSlogan: serverData.appSlogan }),
+      ...(serverData.logoUrl !== undefined && { logoUrl: serverData.logoUrl }),
+      ...(serverData.faviconUrl !== undefined && { faviconUrl: serverData.faviconUrl }),
+      ...(serverData.productsLabel !== undefined && { productsLabel: serverData.productsLabel }),
+      ...(serverData.productsIcon !== undefined && { productsIcon: serverData.productsIcon }),
+      // Deep merge nested objects
+      colors: { ...defaultCustomization.colors, ...(serverData.colors || {}) },
+      darkTheme: { ...defaultCustomization.darkTheme, ...(serverData.darkTheme || {}) },
+      navigation: serverData.navigation || defaultCustomization.navigation,
+      loyaltyCard: { ...defaultCustomization.loyaltyCard, ...(serverData.loyaltyCard || {}) }
     };
-    customization.set(mergedData as CustomizationData);
-    applyCustomStyles(mergedData as CustomizationData);
+    customization.set(mergedData);
+    applyCustomStyles(mergedData);
   }
 
   // Check if current route is loyalty app (not admin routes or cashier)
