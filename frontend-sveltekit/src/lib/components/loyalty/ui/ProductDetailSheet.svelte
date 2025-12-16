@@ -217,7 +217,13 @@
 					{#if adding}
 						<span class="spinner"></span>
 					{:else}
-						<span>В корзину</span>
+						<svg class="cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M3 6h18" stroke-linecap="round"/>
+							<path d="M16 10a4 4 0 01-8 0" stroke-linecap="round"/>
+						</svg>
+						<span class="btn-text">В корзину</span>
+						<span class="btn-divider"></span>
 						<span class="total-price">{formatNumber(totalPrice)} ₽</span>
 					{/if}
 				</button>
@@ -492,33 +498,59 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 8px;
-		padding: 14px 20px;
-		background: var(--primary-orange);
+		gap: 10px;
+		padding: 16px 24px;
+		background: linear-gradient(135deg, var(--primary-orange) 0%, #e85a00 100%);
 		color: white;
 		border: none;
-		border-radius: 12px;
+		border-radius: 14px;
 		font-size: 16px;
 		font-weight: 600;
 		cursor: pointer;
 		transition: all 0.2s ease;
+		box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
 	}
 
 	.add-to-cart-btn:hover:not(:disabled) {
-		background: var(--primary-orange-dark);
-		transform: scale(1.02);
+		background: linear-gradient(135deg, #e85a00 0%, #cc4e00 100%);
+		transform: translateY(-2px);
+		box-shadow: 0 6px 16px rgba(255, 107, 0, 0.4);
+	}
+
+	.add-to-cart-btn:active:not(:disabled) {
+		transform: translateY(0);
+		box-shadow: 0 2px 8px rgba(255, 107, 0, 0.3);
 	}
 
 	.add-to-cart-btn:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
+		box-shadow: none;
+	}
+
+	.cart-icon {
+		width: 22px;
+		height: 22px;
+		flex-shrink: 0;
+	}
+
+	.btn-text {
+		font-weight: 600;
+	}
+
+	.btn-divider {
+		width: 1px;
+		height: 20px;
+		background: rgba(255, 255, 255, 0.3);
 	}
 
 	.total-price {
-		padding: 4px 10px;
+		padding: 6px 12px;
 		background: rgba(255, 255, 255, 0.2);
-		border-radius: 6px;
-		font-size: 14px;
+		border-radius: 8px;
+		font-size: 15px;
+		font-weight: 700;
+		backdrop-filter: blur(4px);
 	}
 
 	.spinner {

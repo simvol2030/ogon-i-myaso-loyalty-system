@@ -109,6 +109,15 @@
 		return true;
 	});
 
+	// Can send broadcast: either have message or can auto-generate from title
+	const canSendBroadcast = $derived(() => {
+		if (broadcastSending) return false;
+		if (!savedPromotionId) return false;
+		// Can send if we have message OR if we have title to generate message
+		if (!broadcastMessage && !formData.title) return false;
+		return true;
+	});
+
 	const handleImageUrlChange = (value: string) => {
 		formData.image = value;
 		if (value && value.startsWith('http')) {
@@ -203,8 +212,20 @@
 	};
 
 	const handleSendBroadcast = async () => {
-		if (!savedPromotionId || !broadcastMessage) {
+		if (!savedPromotionId) {
 			error = 'Сначала сохраните акцию';
+			return;
+		}
+
+		// Auto-generate message if empty
+		let messageToSend = broadcastMessage;
+		if (!messageToSend && formData.title) {
+			messageToSend = `🎉 ${formData.title}\n\n${formData.description || ''}\n\n⏰ Срок: ${formData.deadline || 'Успейте воспользоваться!'}`;
+			broadcastMessage = messageToSend;
+		}
+
+		if (!messageToSend) {
+			error = 'Заполните текст рассылки';
 			return;
 		}
 
@@ -216,7 +237,7 @@
 			// Create campaign with promotion link
 			const campaign = await campaignsAPI.create({
 				title: `Рассылка: ${formData.title}`,
-				messageText: broadcastMessage,
+				messageText: messageToSend,
 				messageImage: formData.image || undefined,
 				buttonText: 'Подробнее',
 				buttonUrl: `/offers`, // Link to offers page (promotions page in TWA)
@@ -404,7 +425,7 @@
 									type="button"
 									class="send-broadcast-btn"
 									onclick={handleSendBroadcast}
-									disabled={broadcastSending || !savedPromotionId || !broadcastMessage}
+									disabled={!canSendBroadcast()}
 								>
 									{#if broadcastSending}
 										<span class="spinner"></span>
