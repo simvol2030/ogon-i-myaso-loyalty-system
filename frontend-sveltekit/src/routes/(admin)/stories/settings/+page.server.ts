@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 
-const API_BASE_URL = process.env.BACKEND_URL || 'http://localhost:3007';
+const API_BASE_URL = process.env.BACKEND_URL || 'http://localhost:3012';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const sessionCookie = cookies.get('session');
