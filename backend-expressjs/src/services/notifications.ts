@@ -75,6 +75,8 @@ async function getSettings() {
 async function sendTelegramMessage(botToken: string, chatId: string, message: string): Promise<boolean> {
 	try {
 		const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+		console.log('[Telegram API] Sending message to chat:', chatId);
+
 		const response = await fetch(url, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -85,15 +87,20 @@ async function sendTelegramMessage(botToken: string, chatId: string, message: st
 			})
 		});
 
+		console.log('[Telegram API] Response status:', response.status);
+
 		const result = await response.json() as { ok: boolean; description?: string };
+		console.log('[Telegram API] Response body:', JSON.stringify(result));
+
 		if (!result.ok) {
-			console.error('Telegram API error:', result.description);
+			console.error('[Telegram API] ERROR:', result.description);
 			return false;
 		}
 
+		console.log('[Telegram API] Message sent successfully');
 		return true;
 	} catch (error) {
-		console.error('Failed to send Telegram message:', error);
+		console.error('[Telegram API] Exception while sending message:', error);
 		return false;
 	}
 }
@@ -202,8 +209,20 @@ function buildCustomerStatusMessage(data: StatusChangeData): string {
  */
 export async function notifyNewOrder(order: OrderNotificationData): Promise<void> {
 	try {
+		console.log('[Notifications] notifyNewOrder called for order:', order.orderNumber);
+
 		const settings = await getSettings();
-		if (!settings) return;
+		console.log('[Notifications] Settings loaded:', {
+			hasSettings: !!settings,
+			notificationsEnabled: settings?.telegram_notifications_enabled,
+			hasToken: !!settings?.telegram_bot_token,
+			hasGroupId: !!settings?.telegram_group_id
+		});
+
+		if (!settings) {
+			console.warn('[Notifications] No settings found, aborting');
+			return;
+		}
 
 		// Telegram notification to admin group
 		if (
@@ -211,12 +230,23 @@ export async function notifyNewOrder(order: OrderNotificationData): Promise<void
 			settings.telegram_bot_token &&
 			settings.telegram_group_id
 		) {
+			console.log('[Notifications] Sending Telegram notification to group:', settings.telegram_group_id);
 			const message = buildOrderMessage(order);
-			await sendTelegramMessage(
+			console.log('[Notifications] Message built, length:', message.length);
+
+			const result = await sendTelegramMessage(
 				settings.telegram_bot_token,
 				settings.telegram_group_id,
 				message
 			);
+
+			console.log('[Notifications] Telegram send result:', result ? 'SUCCESS' : 'FAILED');
+		} else {
+			console.warn('[Notifications] Telegram notification conditions not met:', {
+				enabled: settings.telegram_notifications_enabled,
+				hasToken: !!settings.telegram_bot_token,
+				hasGroupId: !!settings.telegram_group_id
+			});
 		}
 
 		// Email notification (placeholder - would need nodemailer)
