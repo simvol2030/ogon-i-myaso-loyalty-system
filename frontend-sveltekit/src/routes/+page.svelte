@@ -24,7 +24,9 @@
     productSheetOpen = false;
   };
 
-  // Redirect to Telegram bot if not running inside Telegram WebApp
+  // TEMPORARY FIX: Redirect disabled for iPhone testing without Telegram
+  // TODO: Re-enable after phone button is fixed and tested
+  /* TEMPORARILY DISABLED FOR TESTING
   onMount(() => {
     if (browser) {
       // Check if we're running inside Telegram WebApp
@@ -36,6 +38,7 @@
       }
     }
   });
+  */
 </script>
 
 <!-- 1. Карта лояльности -->
