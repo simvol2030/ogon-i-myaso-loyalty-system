@@ -243,11 +243,12 @@ function buildCustomerStatusMessage(data: StatusChangeData): string {
  */
 function buildOrderKeyboard(orderNumber: string, customerPhone: string, telegramUserId?: number): any {
 	// First row: status buttons
+	const tgUserId = telegramUserId || 0; // Use 0 if no telegramUserId (guest orders)
 	const buttons = [
 		[
-			{ text: '🟡 Принят', callback_data: `status:accepted:${orderNumber}:${customerPhone}` },
-			{ text: '🟢 Готов', callback_data: `status:ready:${orderNumber}:${customerPhone}` },
-			{ text: '🚗 Выехал', callback_data: `status:departed:${orderNumber}:${customerPhone}` }
+			{ text: '🟡 Принят', callback_data: `status:accepted:${orderNumber}:${customerPhone}:${tgUserId}` },
+			{ text: '🟢 Готов', callback_data: `status:ready:${orderNumber}:${customerPhone}:${tgUserId}` },
+			{ text: '🚗 Выехал', callback_data: `status:departed:${orderNumber}:${customerPhone}:${tgUserId}` }
 		]
 	];
 

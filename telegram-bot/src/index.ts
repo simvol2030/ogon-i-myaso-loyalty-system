@@ -463,6 +463,7 @@ bot.on('callback_query:data', async (ctx) => {
 			const status = parts[1]; // accepted, ready, departed
 			const orderNumber = parts[2];
 			const phone = parts[3];
+			const telegramUserId = parts[4] ? parseInt(parts[4]) : 0;
 
 			const statusEmojis: Record<string, string> = {
 				accepted: '🟡',
@@ -476,8 +477,25 @@ bot.on('callback_query:data', async (ctx) => {
 				departed: 'Выехал'
 			};
 
+			const customerMessages: Record<string, string> = {
+				accepted: 'Ваш заказ принят и скоро будет готовиться! 🟡',
+				ready: 'Ваш заказ готов! 🟢',
+				departed: 'Ваш заказ в пути! Скоро будет доставлен 🚗'
+			};
+
 			const emoji = statusEmojis[status] || '📋';
 			const label = statusLabels[status] || status;
+
+			// Send notification to customer if telegramUserId is available
+			if (telegramUserId > 0) {
+				try {
+					const customerMessage = `🛍️ <b>Заказ #${orderNumber}</b>\n\n${customerMessages[status] || `Статус обновлён: ${label}`}`;
+					await bot.api.sendMessage(telegramUserId, customerMessage, { parse_mode: 'HTML' });
+					console.log(`✅ Status notification sent to customer ${telegramUserId}`);
+				} catch (error) {
+					console.error(`❌ Failed to send status notification to customer ${telegramUserId}:`, error);
+				}
+			}
 
 			// Answer callback to remove loading state
 			await ctx.answerCallbackQuery(`✅ Статус обновлён: ${label}`);
