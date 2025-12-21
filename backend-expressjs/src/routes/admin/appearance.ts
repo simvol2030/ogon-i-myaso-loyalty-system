@@ -401,10 +401,15 @@ router.post('/logo', requireRole('super-admin', 'editor'), upload.single('logo')
 		// Delete original uploaded file
 		fs.unlinkSync(uploadedPath);
 
-		// Update logo URL in database to /logo.png (always same URL)
+		// BUG FIX V3: Add cache busting query param to force browser reload
+		// Without this, browser caches /logo.png and doesn't see new version
+		const timestamp = Date.now();
+		const logoUrlWithCacheBusting = `/logo.png?v=${timestamp}`;
+
+		// Update logo URL in database with cache busting
 		await db.update(appCustomization)
 			.set({
-				logo_url: '/logo.png',
+				logo_url: logoUrlWithCacheBusting,
 				updated_at: new Date().toISOString()
 			})
 			.where(eq(appCustomization.id, 1));
@@ -414,12 +419,12 @@ router.post('/logo', requireRole('super-admin', 'editor'), upload.single('logo')
 
 		// Log upload
 		const adminName = (req as any).user?.name || 'Unknown Admin';
-		console.log(`[LOGO UPLOAD] Admin (${adminName}) uploaded new logo to /static/logo.png`);
+		console.log(`[LOGO UPLOAD] Admin (${adminName}) uploaded new logo to /static/logo.png (cache: v=${timestamp})`);
 
 		res.json({
 			success: true,
 			data: {
-				logoUrl: '/logo.png'
+				logoUrl: logoUrlWithCacheBusting
 			}
 		});
 	} catch (error: any) {
