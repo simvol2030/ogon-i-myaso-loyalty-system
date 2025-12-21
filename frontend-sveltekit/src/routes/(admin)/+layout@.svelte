@@ -116,6 +116,10 @@
 					<span class="icon">🛒</span>
 					<span>Настройки магазина</span>
 				</a>
+				<a href="/delivery-locations" class:active={$page.url.pathname.startsWith('/delivery-locations')} onclick={closeMobileMenu}>
+					<span class="icon">🚚</span>
+					<span>Локации доставки</span>
+				</a>
 				{#if data.user?.role === 'super-admin'}
 					<a href="/settings" class:active={$page.url.pathname === '/settings'} onclick={closeMobileMenu}>
 						<span class="icon">⚙️</span>
