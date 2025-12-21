@@ -121,12 +121,12 @@
 
 	// Submit form
 	async function handleSubmit() {
-		if (!formName.trim() || !formPrice.trim()) {
+		if (!formName.trim() || formPrice === '' || formPrice === null || formPrice === undefined) {
 			error = 'Заполните все обязательные поля';
 			return;
 		}
 
-		const priceInRubles = parseFloat(formPrice);
+		const priceInRubles = parseFloat(formPrice.toString());
 		if (isNaN(priceInRubles) || priceInRubles < 0) {
 			error = 'Неверная цена доставки';
 			return;
