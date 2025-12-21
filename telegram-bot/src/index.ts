@@ -486,9 +486,13 @@ bot.on('callback_query:data', async (ctx) => {
 			const originalMessage = ctx.callbackQuery.message?.text || '';
 			const updatedMessage = `${originalMessage}\n\n${emoji} <b>Статус обновлён: ${label}</b>\n⏰ ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
 
-			// Update message and remove keyboard
+			// Get original keyboard to preserve buttons
+			const originalKeyboard = ctx.callbackQuery.message?.reply_markup;
+
+			// Update message and keep keyboard
 			await ctx.editMessageText(updatedMessage, {
-				parse_mode: 'HTML'
+				parse_mode: 'HTML',
+				reply_markup: originalKeyboard
 			});
 
 			console.log(`✅ Status updated: ${status} for order ${orderNumber}`);
@@ -518,8 +522,12 @@ bot.on('callback_query:data', async (ctx) => {
 			const originalMessage = ctx.callbackQuery.message?.text || '';
 			const updatedMessage = `${originalMessage}\n\n⭐ <b>Запрос на отзыв отправлен</b>\n⏰ ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
 
+			// Get original keyboard to preserve buttons
+			const originalKeyboard = ctx.callbackQuery.message?.reply_markup;
+
 			await ctx.editMessageText(updatedMessage, {
-				parse_mode: 'HTML'
+				parse_mode: 'HTML',
+				reply_markup: originalKeyboard
 			});
 
 			console.log(`✅ Review request sent to user ${telegramUserId} for order ${orderNumber}`);
