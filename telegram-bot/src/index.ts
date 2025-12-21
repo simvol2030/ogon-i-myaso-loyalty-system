@@ -478,8 +478,8 @@ bot.on('callback_query:data', async (ctx) => {
 			};
 
 			const customerMessages: Record<string, string> = {
-				accepted: 'Ваш заказ принят и скоро будет готовиться! 🟡',
-				ready: 'Ваш заказ готов! 🟢',
+				accepted: 'Ваш заказ принят и скоро будет готов! 🟡',
+				ready: 'Ваш заказ готов! Скоро отправим 🟢',
 				departed: 'Ваш заказ в пути! Скоро будет доставлен 🚗'
 			};
 
