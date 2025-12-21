@@ -16,7 +16,7 @@
 		selectedLocationId = $bindable<number | null>(null),
 		deliveryPrice = $bindable(0),
 		oninput,
-		placeholder = 'Начните вводить название...',
+		placeholder = 'Выберите город или начните вводить...',
 		required = false
 	}: Props = $props();
 
@@ -54,7 +54,8 @@
 	// Filter locations based on input
 	function filterLocations(searchTerm: string) {
 		if (!searchTerm.trim()) {
-			filteredLocations = [];
+			// Show first 10 locations if no search term
+			filteredLocations = allLocations.slice(0, 10);
 			return;
 		}
 
@@ -120,9 +121,10 @@
 		}
 	}
 
-	// Handle focus
+	// Handle focus - show all locations or filtered results
 	function handleFocus() {
-		if (value && filteredLocations.length > 0) {
+		if (allLocations.length > 0) {
+			filterLocations(value); // Re-filter with current value (or show all if empty)
 			isOpen = true;
 		}
 	}
