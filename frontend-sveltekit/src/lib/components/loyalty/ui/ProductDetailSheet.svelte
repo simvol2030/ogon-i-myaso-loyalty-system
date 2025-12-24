@@ -252,7 +252,9 @@
 	.product-sheet {
 		width: 100%;
 		max-width: 500px;
-		max-height: 90vh;
+		/* FIX: Уменьшаем max-height для старых устройств, чтобы footer был виден */
+		max-height: 85vh;
+		max-height: 85dvh; /* Dynamic viewport height для современных браузеров */
 		background: var(--bg-white);
 		border-radius: 24px 24px 0 0;
 		display: flex;
@@ -260,6 +262,8 @@
 		animation: slideUp 0.3s ease-out;
 		position: relative;
 		overflow: hidden;
+		/* FIX: Safe area для iPhone */
+		padding-bottom: env(safe-area-inset-bottom, 0);
 	}
 
 	@keyframes slideUp {
@@ -322,10 +326,13 @@
 	.product-image {
 		width: 100%;
 		aspect-ratio: 1 / 1;
-		max-height: 320px;
+		/* FIX: Уменьшаем max-height для старых устройств */
+		max-height: 280px;
+		max-height: min(280px, 35vh);
 		background: var(--bg-light);
 		position: relative;
 		overflow: hidden;
+		flex-shrink: 0;
 	}
 
 	.product-image img {
@@ -441,13 +448,23 @@
 
 	.sheet-footer {
 		padding: 16px 20px;
-		padding-bottom: calc(16px + env(safe-area-inset-bottom));
+		padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
 		background: var(--bg-white);
 		border-top: 1px solid var(--border-color);
 		display: flex;
 		gap: 12px;
 		align-items: center;
 		flex-shrink: 0;
+		/* FIX: Гарантируем видимость на старых устройствах */
+		position: sticky;
+		position: -webkit-sticky;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 10;
+		/* FIX: Минимальная высота для кнопки */
+		min-height: 72px;
+		box-sizing: border-box;
 	}
 
 	.quantity-selector {
@@ -567,8 +584,15 @@
 	}
 
 	@media (max-width: 480px) {
+		.product-sheet {
+			/* FIX: Ещё меньше на маленьких экранах */
+			max-height: 80vh;
+			max-height: 80dvh;
+		}
+
 		.product-image {
-			max-height: 280px;
+			max-height: 220px;
+			max-height: min(220px, 30vh);
 		}
 
 		.product-name {
@@ -582,6 +606,18 @@
 		.qty-btn {
 			width: 36px;
 			height: 36px;
+		}
+
+		.sheet-footer {
+			padding: 12px 16px;
+			padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+			gap: 8px;
+			min-height: 64px;
+		}
+
+		.add-to-cart-btn {
+			padding: 12px 16px;
+			font-size: 14px;
 		}
 	}
 </style>

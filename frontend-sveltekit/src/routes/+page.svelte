@@ -4,6 +4,7 @@
   import type { Product } from '$lib/types/loyalty';
   import LoyaltyCard from '$lib/components/loyalty/ui/LoyaltyCard.svelte';
   import StoriesCarousel from '$lib/components/loyalty/ui/StoriesCarousel.svelte';
+  import StoreSnippet from '$lib/components/loyalty/ui/StoreSnippet.svelte';
   import RecommendationCard from '$lib/components/loyalty/ui/RecommendationCard.svelte';
   import OfferCardCompact from '$lib/components/loyalty/ui/OfferCardCompact.svelte';
   import ProductCard from '$lib/components/loyalty/ui/ProductCard.svelte';
@@ -46,6 +47,11 @@
 
 <!-- 2. Web Stories -->
 <StoriesCarousel userId={data.user?.id} />
+
+<!-- 2.5. Snippet магазина -->
+{#if data.store}
+  <StoreSnippet store={data.store} />
+{/if}
 
 <!-- 3. Акции месяца -->
 <section class="section-content">

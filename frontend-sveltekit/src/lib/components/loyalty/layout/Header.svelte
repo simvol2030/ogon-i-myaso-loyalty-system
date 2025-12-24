@@ -2,6 +2,7 @@
   import { theme, toggleTheme } from '$lib/stores/loyalty';
   import { appName, appSlogan, logoUrl } from '$lib/stores/customization';
   import CartIcon from '$lib/components/loyalty/ui/CartIcon.svelte';
+  import { browser } from '$app/environment';
 
   interface Props {
     onMenuClick: () => void;
@@ -10,9 +11,54 @@
 
   let { onMenuClick, onCartClick }: Props = $props();
 
-  // Phone call handler for iOS Safari compatibility
+  const PHONE_NUMBER = '+79328883388';
+
+  /**
+   * Phone call handler with iOS Telegram WebApp compatibility
+   * Problem: tel: links don't work properly in Telegram WebApp on older iOS devices
+   * Solution: Use Telegram WebApp API openLink() or fallback to multiple methods
+   */
   function handlePhoneCall() {
-    window.location.href = 'tel:+79328883388';
+    if (!browser) return;
+
+    const telUrl = `tel:${PHONE_NUMBER}`;
+
+    // Check if running inside Telegram WebApp
+    const tg = (window as any).Telegram?.WebApp;
+
+    if (tg && typeof tg.openLink === 'function') {
+      // Method 1: Use Telegram WebApp API (works on iOS)
+      try {
+        tg.openLink(telUrl, { try_instant_view: false });
+        return;
+      } catch (e) {
+        console.warn('[Header] Telegram openLink failed:', e);
+      }
+    }
+
+    // Method 2: Try window.open (works in some browsers)
+    try {
+      const opened = window.open(telUrl, '_blank');
+      if (opened) return;
+    } catch (e) {
+      console.warn('[Header] window.open failed:', e);
+    }
+
+    // Method 3: Create a temporary link and click it (fallback for older browsers)
+    try {
+      const link = document.createElement('a');
+      link.href = telUrl;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    } catch (e) {
+      console.warn('[Header] Link click failed:', e);
+    }
+
+    // Method 4: Direct location change (last resort)
+    window.location.href = telUrl;
   }
 </script>
 

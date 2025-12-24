@@ -140,7 +140,25 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
         textPrimary: s.dark_text_primary,
         textSecondary: s.dark_text_secondary,
         borderColor: s.dark_border_color
-      }
+      },
+      // FIX: Добавляем loyaltyCard настройки для виджета лояльности
+      loyaltyCard: {
+        gradientStart: s.loyalty_card_gradient_start,
+        gradientEnd: s.loyalty_card_gradient_end,
+        textColor: s.loyalty_card_text_color,
+        accentColor: s.loyalty_card_accent_color,
+        badgeBg: s.loyalty_card_badge_bg,
+        badgeText: s.loyalty_card_badge_text,
+        borderRadius: s.loyalty_card_border_radius,
+        showShimmer: Boolean(s.loyalty_card_show_shimmer)
+      },
+      // Добавляем navigation для бокового меню
+      navigation: {
+        bottomNav: JSON.parse(s.bottom_nav_items || '[]'),
+        sidebarMenu: JSON.parse(s.sidebar_menu_items || '[]')
+      },
+      productsLabel: s.products_label,
+      productsIcon: s.products_icon
     };
   }
 

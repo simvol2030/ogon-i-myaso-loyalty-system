@@ -17,7 +17,8 @@ export const load: PageServerLoad = async ({ fetch }) => {
       return {
         recommendations: [],
         monthOffers: [],
-        topProducts: []
+        topProducts: [],
+        store: null
       };
     }
 
@@ -26,7 +27,8 @@ export const load: PageServerLoad = async ({ fetch }) => {
     return {
       recommendations: data.recommendations || [],
       monthOffers: data.monthOffers || [],
-      topProducts: data.topProducts || []
+      topProducts: data.topProducts || [],
+      store: data.store || null // First store for homepage snippet
     };
 
   } catch (error) {
@@ -35,7 +37,8 @@ export const load: PageServerLoad = async ({ fetch }) => {
     return {
       recommendations: [],
       monthOffers: [],
-      topProducts: []
+      topProducts: [],
+      store: null
     };
   }
 };

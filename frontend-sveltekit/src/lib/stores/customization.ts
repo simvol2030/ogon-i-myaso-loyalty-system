@@ -98,6 +98,8 @@ const defaultCustomization: CustomizationData = {
 			{ id: 'home', href: '/', label: 'Главная', icon: '📊', visible: true, isExternal: false },
 			{ id: 'products', href: '/products', label: 'Меню', icon: '🛍️', visible: true, isExternal: false },
 			{ id: 'offers', href: '/offers', label: 'Акции', icon: '🎁', visible: true, isExternal: false },
+			{ id: 'stores', href: '/stores', label: 'Магазины', icon: '🏪', visible: true, isExternal: false },
+			{ id: 'feed', href: '/feed', label: 'Блог', icon: '📰', visible: true, isExternal: false },
 			{ id: 'history', href: '/history', label: 'История', icon: '📜', visible: true, isExternal: false },
 			{ id: 'profile', href: '/profile', label: 'Профиль', icon: '👤', visible: true, isExternal: false },
 			{ id: 'reputation', href: '/reputation', label: 'Оставить отзыв', icon: '⭐', visible: true, isExternal: false }

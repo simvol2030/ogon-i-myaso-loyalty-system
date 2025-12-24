@@ -80,10 +80,19 @@ router.get('/home', async (req: Request, res: Response) => {
 			.limit(4)
 			.all();
 
+		// Fetch first active store for homepage snippet
+		const [firstStore] = await db
+			.select()
+			.from(stores)
+			.where(eq(stores.is_active, true))
+			.limit(1)
+			.all();
+
 		return res.json({
 			recommendations: recommendationProductsList, // Sprint 3: Changed from old recommendations table
 			monthOffers: offersList,
-			topProducts: topProductsList
+			topProducts: topProductsList,
+			store: firstStore || null // First store for homepage snippet
 		});
 
 	} catch (error) {
