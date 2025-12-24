@@ -191,10 +191,9 @@
 						{/if}
 					</div>
 				</div>
-			</div>
 
-			<!-- Footer with quantity and add to cart (sticky) -->
-			<div class="sheet-footer">
+				<!-- Footer with quantity and add to cart (now inside scroll area) -->
+				<div class="sheet-footer">
 				<div class="quantity-selector">
 					<button
 						class="qty-btn"
@@ -228,6 +227,7 @@
 					{/if}
 				</button>
 			</div>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -252,10 +252,9 @@
 	.product-sheet {
 		width: 100%;
 		max-width: 500px;
-		/* FIX: Уменьшаем max-height для старых устройств */
-		/* Используем calc для вычета safe-area и гарантии видимости footer */
-		max-height: 70vh;
-		max-height: min(75dvh, calc(100vh - 80px));
+		/* FIX: Теперь всё скроллится, можно использовать большую высоту */
+		max-height: 90vh;
+		max-height: 90dvh;
 		background: var(--bg-white);
 		border-radius: 24px 24px 0 0;
 		display: flex;
@@ -325,9 +324,7 @@
 	.product-image {
 		width: 100%;
 		aspect-ratio: 1 / 1;
-		/* FIX: Уменьшаем max-height для старых устройств */
 		max-height: 280px;
-		max-height: min(280px, 35vh);
 		background: var(--bg-light);
 		position: relative;
 		overflow: hidden;
@@ -446,16 +443,16 @@
 	}
 
 	.sheet-footer {
+		/* FIX: Footer теперь внутри scroll area - всегда доступен через прокрутку */
 		padding: 16px 20px;
-		padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
+		/* Добавляем safe-area отступ снизу */
+		padding-bottom: calc(20px + env(safe-area-inset-bottom, 0));
 		background: var(--bg-white);
 		border-top: 1px solid var(--border-color);
 		display: flex;
 		gap: 12px;
 		align-items: center;
-		flex-shrink: 0;
-		/* FIX: Минимальная высота для гарантии видимости кнопки */
-		min-height: 72px;
+		margin-top: auto;
 		box-sizing: border-box;
 	}
 
@@ -577,14 +574,13 @@
 
 	@media (max-width: 480px) {
 		.product-sheet {
-			/* FIX: Ещё меньше на маленьких экранах для старых iPhone */
-			max-height: 65vh;
-			max-height: min(68dvh, calc(100vh - 100px));
+			/* FIX: На маленьких экранах тоже всё скроллится */
+			max-height: 85vh;
+			max-height: 85dvh;
 		}
 
 		.product-image {
-			max-height: 220px;
-			max-height: min(220px, 30vh);
+			max-height: 200px;
 		}
 
 		.product-name {
@@ -602,9 +598,8 @@
 
 		.sheet-footer {
 			padding: 12px 16px;
-			padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+			padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
 			gap: 8px;
-			min-height: 64px;
 		}
 
 		.add-to-cart-btn {
