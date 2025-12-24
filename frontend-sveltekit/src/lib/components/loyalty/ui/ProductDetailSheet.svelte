@@ -445,8 +445,8 @@
 	.sheet-footer {
 		/* FIX: Footer теперь внутри scroll area - всегда доступен через прокрутку */
 		padding: 16px 20px;
-		/* Добавляем отступ снизу ~1см (40px) + safe-area */
-		padding-bottom: calc(40px + env(safe-area-inset-bottom, 0));
+		/* Добавляем отступ снизу ~2см (80px) + safe-area */
+		padding-bottom: calc(80px + env(safe-area-inset-bottom, 0));
 		background: var(--bg-white);
 		border-top: 1px solid var(--border-color);
 		display: flex;
@@ -598,7 +598,7 @@
 
 		.sheet-footer {
 			padding: 12px 16px;
-			padding-bottom: calc(40px + env(safe-area-inset-bottom, 0));
+			padding-bottom: calc(80px + env(safe-area-inset-bottom, 0));
 			gap: 8px;
 		}
 
