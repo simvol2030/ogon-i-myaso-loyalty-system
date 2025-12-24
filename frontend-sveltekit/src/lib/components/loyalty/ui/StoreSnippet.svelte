@@ -43,8 +43,8 @@
 <section class="store-snippet">
   <a href="/stores" class="snippet-link">
     <div class="snippet-header">
-      <span class="snippet-icon">🏪</span>
-      <h3 class="snippet-title">Наш магазин</h3>
+      <span class="snippet-icon">📞</span>
+      <h3 class="snippet-title">Наши контакты</h3>
       <span class="arrow">→</span>
     </div>
   </a>
