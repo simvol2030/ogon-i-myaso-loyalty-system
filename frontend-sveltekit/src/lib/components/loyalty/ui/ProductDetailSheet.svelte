@@ -252,9 +252,10 @@
 	.product-sheet {
 		width: 100%;
 		max-width: 500px;
-		/* FIX: Уменьшаем max-height для старых устройств, чтобы footer был виден */
-		max-height: 85vh;
-		max-height: 85dvh; /* Dynamic viewport height для современных браузеров */
+		/* FIX: Уменьшаем max-height для старых устройств */
+		/* Используем calc для вычета safe-area и гарантии видимости footer */
+		max-height: 70vh;
+		max-height: min(75dvh, calc(100vh - 80px));
 		background: var(--bg-white);
 		border-radius: 24px 24px 0 0;
 		display: flex;
@@ -262,8 +263,6 @@
 		animation: slideUp 0.3s ease-out;
 		position: relative;
 		overflow: hidden;
-		/* FIX: Safe area для iPhone */
-		padding-bottom: env(safe-area-inset-bottom, 0);
 	}
 
 	@keyframes slideUp {
@@ -455,14 +454,7 @@
 		gap: 12px;
 		align-items: center;
 		flex-shrink: 0;
-		/* FIX: Гарантируем видимость на старых устройствах */
-		position: sticky;
-		position: -webkit-sticky;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		z-index: 10;
-		/* FIX: Минимальная высота для кнопки */
+		/* FIX: Минимальная высота для гарантии видимости кнопки */
 		min-height: 72px;
 		box-sizing: border-box;
 	}
@@ -585,9 +577,9 @@
 
 	@media (max-width: 480px) {
 		.product-sheet {
-			/* FIX: Ещё меньше на маленьких экранах */
-			max-height: 80vh;
-			max-height: 80dvh;
+			/* FIX: Ещё меньше на маленьких экранах для старых iPhone */
+			max-height: 65vh;
+			max-height: min(68dvh, calc(100vh - 100px));
 		}
 
 		.product-image {
