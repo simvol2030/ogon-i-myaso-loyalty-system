@@ -30,6 +30,20 @@ data/media/video/*
 !data/media/images/.gitkeep
 !data/media/video/.gitkeep
 
+# Uploaded files (backend) - user-generated content
+backend-expressjs/uploads/
+!backend-expressjs/uploads/.gitkeep
+!backend-expressjs/uploads/*/.gitkeep
+
+# Dynamic logo (uploaded via admin panel)
+frontend-sveltekit/static/logo.png
+frontend-sveltekit/static/logo.webp
+frontend-sveltekit/static/logo.*.backup
+
+# Backup archives
+*.tar.gz
+uploads-backup-*.tar.gz
+
 # Environment variables
 .env
 .env.local

@@ -23,3 +23,8 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Dynamic assets (uploaded via admin panel)
+static/logo.png
+static/logo.webp
+static/logo.*.backup
