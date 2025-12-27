@@ -20,6 +20,7 @@ import transactionsRouter from './routes/transactions';
 import contentRouter from './routes/content';
 import sellerRouter from './routes/seller';
 import feedRouter from './routes/feed'; // Feed public API
+import flashRouter from './routes/flash'; // Flash screens for TV
 
 // Public API routes
 import loyaltyRouter from './routes/api/loyalty';
@@ -139,6 +140,7 @@ app.use('/api/ratings', ratingsRouter); // Ratings/Reviews
 app.use('/api/shop', shopRouter); // Shop settings and delivery locations
 app.use('/api/feed', feedRouter); // Feed/Лента public API
 app.use('/api/stories', storiesRouter); // Web Stories (public)
+app.use('/api/flash', flashRouter); // Flash screens for TV menu
 
 // Bot API routes (public, no auth required)
 app.use('/api/bot/welcome-messages', botWelcomeMessagesRouter); // Welcome messages for bot
