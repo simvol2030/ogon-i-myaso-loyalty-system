@@ -24,16 +24,25 @@
 
 	.products-grid {
 		display: grid;
-		grid-template-columns: repeat(6, 1fr);
-		grid-template-rows: repeat(3, 1fr);
-		gap: 16px;
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		grid-template-rows: repeat(2, 1fr); /* 2 ряда вместо 3 */
+		gap: 1rem;
 		flex: 1;
+		align-content: center;
 	}
 
-	/* Для неполных слайдов - центрирование */
-	@media (max-width: 1600px) {
+	/* Для больших экранов TV - ограничиваем ширину колонок */
+	@media (min-width: 1400px) {
 		.products-grid {
-			gap: 12px;
+			grid-template-columns: repeat(6, 1fr);
+		}
+	}
+
+	/* Для очень больших экранов - больше колонок */
+	@media (min-width: 1920px) {
+		.products-grid {
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 1.25rem;
 		}
 	}
 </style>

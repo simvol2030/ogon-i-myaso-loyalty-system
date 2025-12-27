@@ -14,11 +14,9 @@ export interface ProductItem {
 }
 
 export interface Slide {
-	type: 'products' | 'sets' | 'combo';
-	category: string;
-	categoryId: number;
+	type: 'products' | 'sets';
+	title: string;           // Объединённый заголовок ("САЛАТЫ • СУПЫ")
 	items: ProductItem[];
-	setItem?: ProductItem; // Для combo layout
 }
 
 export interface FlashConfig {

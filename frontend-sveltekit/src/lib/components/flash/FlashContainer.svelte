@@ -3,7 +3,6 @@
 	import type { Slide, FlashConfig } from './types';
 	import SlideProducts from './SlideProducts.svelte';
 	import SlideSets from './SlideSets.svelte';
-	import SlideCombo from './SlideCombo.svelte';
 	import SlideIndicator from './SlideIndicator.svelte';
 
 	let { slides, config }: { slides: Slide[]; config: FlashConfig } = $props();
@@ -45,9 +44,9 @@
 </script>
 
 <div class="flash-container">
-	<!-- Header с названием категории и индикатором -->
+	<!-- Header с названием группы и индикатором -->
 	<header class="flash-header">
-		<h1 class="category-title">{currentSlide?.category || ''}</h1>
+		<h1 class="category-title">{currentSlide?.title || ''}</h1>
 		<SlideIndicator total={slides.length} current={currentIndex} />
 	</header>
 
@@ -59,8 +58,6 @@
 					<SlideProducts {slide} />
 				{:else if slide.type === 'sets'}
 					<SlideSets {slide} />
-				{:else if slide.type === 'combo'}
-					<SlideCombo {slide} />
 				{/if}
 			</div>
 		{/each}

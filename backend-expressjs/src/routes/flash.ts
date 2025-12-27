@@ -24,11 +24,9 @@ interface ProductItem {
 }
 
 interface Slide {
-	type: 'products' | 'sets' | 'combo';
-	category: string;
-	categoryId: number;
+	type: 'products' | 'sets';
+	title: string;           // Объединённый заголовок ("САЛАТЫ • СУПЫ")
 	items: ProductItem[];
-	setItem?: ProductItem; // Для combo layout
 }
 
 interface FlashResponse {
@@ -40,14 +38,72 @@ interface FlashResponse {
 	};
 }
 
-// Конфигурация экранов
-const FLASH_1_CATEGORY_IDS = [5, 6, 7]; // Шашлык, Кебаб, Сеты
-const FLASH_2_CATEGORY_IDS = [3, 4, 8, 9, 13, 11, 1, 10, 12, 2, 14]; // Остальное меню
-const SETS_CATEGORY_ID = 7;
+// Группы категорий
+interface CategoryGroup {
+	id: string;
+	title: string;
+	categoryIds: number[];
+	layout: 'products' | 'sets';
+}
 
-const ITEMS_PER_SLIDE = 18; // 6x3 grid
+// Flash-1: Мангал
+const FLASH1_GROUPS: CategoryGroup[] = [
+	{
+		id: 'sets',
+		title: 'СЕТЫ',
+		categoryIds: [7],      // Сеты
+		layout: 'sets'         // 3 на слайд
+	},
+	{
+		id: 'grill',
+		title: 'ШАШЛЫК • КЕБАБ',
+		categoryIds: [5, 6],   // Шашлык, Кебаб
+		layout: 'products'     // 6×2 сетка
+	}
+];
+
+// Flash-2: Остальное меню
+const FLASH2_GROUPS: CategoryGroup[] = [
+	{
+		id: 'first-courses',
+		title: 'САЛАТЫ • СУПЫ',
+		categoryIds: [3, 4],   // Салаты, Супы
+		layout: 'products'
+	},
+	{
+		id: 'main-courses',
+		title: 'ВТОРЫЕ БЛЮДА • ГАРНИРЫ',
+		categoryIds: [8, 9],   // Вторые блюда, Гарниры
+		layout: 'products'
+	},
+	{
+		id: 'georgian',
+		title: 'ХИНКАЛИ • ХАЧАПУРИ',
+		categoryIds: [1, 10],  // Хинкали, Хачапури
+		layout: 'products'
+	},
+	{
+		id: 'fastfood',
+		title: 'ПИЦЦА • ШАУРМА',
+		categoryIds: [11, 12], // Пицца, Шаурма
+		layout: 'products'
+	},
+	{
+		id: 'bakery',
+		title: 'ВЫПЕЧКА',
+		categoryIds: [13],     // Выпечка
+		layout: 'products'
+	},
+	{
+		id: 'extras',
+		title: 'СОУСЫ • НАПИТКИ',
+		categoryIds: [2, 14],  // Соусы, Напитки
+		layout: 'products'
+	}
+];
+
+const ITEMS_PER_SLIDE = 12; // 6x2 grid (changed from 18)
 const SETS_PER_SLIDE = 3;
-const COMBO_PRODUCTS_COUNT = 9; // 3x3 grid для combo layout
 
 // Форматирование продукта
 function formatProduct(p: typeof products.$inferSelect): ProductItem {
@@ -62,48 +118,35 @@ function formatProduct(p: typeof products.$inferSelect): ProductItem {
 	};
 }
 
-// Генерация слайдов для обычных товаров (6x3)
-function generateProductSlides(items: ProductItem[], categoryName: string, categoryId: number): Slide[] {
+// Генерация слайдов для группы категорий
+function generateSlidesForGroup(group: CategoryGroup, groupProducts: ProductItem[]): Slide[] {
 	const slides: Slide[] = [];
 
-	for (let i = 0; i < items.length; i += ITEMS_PER_SLIDE) {
-		slides.push({
-			type: 'products',
-			category: categoryName,
-			categoryId,
-			items: items.slice(i, i + ITEMS_PER_SLIDE)
-		});
+	if (groupProducts.length === 0) {
+		return slides;
+	}
+
+	if (group.layout === 'sets') {
+		// Сеты: по 3 на слайд
+		for (let i = 0; i < groupProducts.length; i += SETS_PER_SLIDE) {
+			slides.push({
+				type: 'sets',
+				title: group.title,
+				items: groupProducts.slice(i, i + SETS_PER_SLIDE)
+			});
+		}
+	} else {
+		// Товары: по 12 на слайд (6×2)
+		for (let i = 0; i < groupProducts.length; i += ITEMS_PER_SLIDE) {
+			slides.push({
+				type: 'products',
+				title: group.title,
+				items: groupProducts.slice(i, i + ITEMS_PER_SLIDE)
+			});
+		}
 	}
 
 	return slides;
-}
-
-// Генерация слайдов для сетов (3 на слайд)
-function generateSetSlides(items: ProductItem[], categoryName: string, categoryId: number): {
-	slides: Slide[];
-	orphans: ProductItem[];
-} {
-	const slides: Slide[] = [];
-	const orphans: ProductItem[] = [];
-
-	const fullSlideCount = Math.floor(items.length / SETS_PER_SLIDE);
-
-	for (let i = 0; i < fullSlideCount; i++) {
-		slides.push({
-			type: 'sets',
-			category: categoryName,
-			categoryId,
-			items: items.slice(i * SETS_PER_SLIDE, (i + 1) * SETS_PER_SLIDE)
-		});
-	}
-
-	// Остаток - orphans для combo
-	const remainder = items.length % SETS_PER_SLIDE;
-	if (remainder > 0) {
-		orphans.push(...items.slice(fullSlideCount * SETS_PER_SLIDE));
-	}
-
-	return { slides, orphans };
 }
 
 // ==================== GET /api/flash/:screen ====================
@@ -117,22 +160,10 @@ router.get('/:screen', async (req: Request, res: Response) => {
 			});
 		}
 
-		const categoryIds = screenNum === 1 ? FLASH_1_CATEGORY_IDS : FLASH_2_CATEGORY_IDS;
+		const groups = screenNum === 1 ? FLASH1_GROUPS : FLASH2_GROUPS;
 
-		// Получаем категории
-		const categoryList = await db
-			.select()
-			.from(categories)
-			.where(
-				and(
-					eq(categories.is_active, true),
-					inArray(categories.id, categoryIds)
-				)
-			)
-			.orderBy(asc(categories.position));
-
-		// Создаём map категорий для быстрого доступа
-		const categoryMap = new Map(categoryList.map(c => [c.id, c]));
+		// Собираем все ID категорий из групп
+		const allCategoryIds = groups.flatMap(g => g.categoryIds);
 
 		// Получаем все продукты для указанных категорий
 		const productList = await db
@@ -141,7 +172,7 @@ router.get('/:screen', async (req: Request, res: Response) => {
 			.where(
 				and(
 					eq(products.is_active, true),
-					inArray(products.category_id, categoryIds)
+					inArray(products.category_id, allCategoryIds)
 				)
 			)
 			.orderBy(asc(products.position));
@@ -158,99 +189,18 @@ router.get('/:screen', async (req: Request, res: Response) => {
 
 		const slides: Slide[] = [];
 
-		if (screenNum === 1) {
-			// Flash-1: Сначала сеты, потом остальное
-			const setsCategory = categoryMap.get(SETS_CATEGORY_ID);
-			const setsProducts = productsByCategory.get(SETS_CATEGORY_ID) || [];
-
-			if (setsCategory && setsProducts.length > 0) {
-				const { slides: setSlides, orphans } = generateSetSlides(
-					setsProducts,
-					setsCategory.name,
-					SETS_CATEGORY_ID
-				);
-				slides.push(...setSlides);
-
-				// Если есть orphan сеты, создаём combo слайды
-				if (orphans.length > 0) {
-					// Получаем продукты из других категорий для combo
-					const otherCategoryIds = FLASH_1_CATEGORY_IDS.filter(id => id !== SETS_CATEGORY_ID);
-					let comboProducts: ProductItem[] = [];
-
-					for (const catId of otherCategoryIds) {
-						const catProducts = productsByCategory.get(catId) || [];
-						comboProducts.push(...catProducts);
-					}
-
-					// Создаём combo слайды для каждого orphan сета
-					for (const orphanSet of orphans) {
-						const comboItems = comboProducts.splice(0, COMBO_PRODUCTS_COUNT);
-						if (comboItems.length > 0) {
-							const otherCategory = categoryMap.get(otherCategoryIds[0]);
-							slides.push({
-								type: 'combo',
-								category: otherCategory?.name || 'Мангал',
-								categoryId: SETS_CATEGORY_ID,
-								items: comboItems,
-								setItem: orphanSet
-							});
-						} else {
-							// Если нет продуктов для combo, добавляем сет как отдельный слайд
-							slides.push({
-								type: 'sets',
-								category: setsCategory.name,
-								categoryId: SETS_CATEGORY_ID,
-								items: [orphanSet]
-							});
-						}
-					}
-
-					// Добавляем оставшиеся продукты из других категорий
-					for (const catId of otherCategoryIds) {
-						const category = categoryMap.get(catId);
-						// Продукты уже частично использованы в combo, берём остаток
-						const remainingProducts = productsByCategory.get(catId) || [];
-						// Фильтруем использованные
-						const usedIds = slides
-							.filter(s => s.type === 'combo')
-							.flatMap(s => s.items.map(i => i.id));
-
-						const unusedProducts = remainingProducts.filter(p => !usedIds.includes(p.id));
-
-						if (category && unusedProducts.length > 0) {
-							slides.push(...generateProductSlides(unusedProducts, category.name, catId));
-						}
-					}
-				} else {
-					// Нет orphans, добавляем остальные категории как обычные слайды
-					for (const catId of FLASH_1_CATEGORY_IDS) {
-						if (catId === SETS_CATEGORY_ID) continue;
-						const category = categoryMap.get(catId);
-						const catProducts = productsByCategory.get(catId) || [];
-						if (category && catProducts.length > 0) {
-							slides.push(...generateProductSlides(catProducts, category.name, catId));
-						}
-					}
-				}
-			} else {
-				// Нет сетов, просто добавляем все категории
-				for (const catId of FLASH_1_CATEGORY_IDS) {
-					const category = categoryMap.get(catId);
-					const catProducts = productsByCategory.get(catId) || [];
-					if (category && catProducts.length > 0) {
-						slides.push(...generateProductSlides(catProducts, category.name, catId));
-					}
-				}
-			}
-		} else {
-			// Flash-2: Просто все категории по порядку
-			for (const catId of FLASH_2_CATEGORY_IDS) {
-				const category = categoryMap.get(catId);
+		// Генерируем слайды для каждой группы
+		for (const group of groups) {
+			// Собираем все продукты из категорий группы
+			const groupProducts: ProductItem[] = [];
+			for (const catId of group.categoryIds) {
 				const catProducts = productsByCategory.get(catId) || [];
-				if (category && catProducts.length > 0) {
-					slides.push(...generateProductSlides(catProducts, category.name, catId));
-				}
+				groupProducts.push(...catProducts);
 			}
+
+			// Генерируем слайды для группы
+			const groupSlides = generateSlidesForGroup(group, groupProducts);
+			slides.push(...groupSlides);
 		}
 
 		const response: FlashResponse = {
