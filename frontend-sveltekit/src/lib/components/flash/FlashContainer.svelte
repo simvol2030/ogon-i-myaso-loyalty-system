@@ -162,15 +162,17 @@
 	</header>
 
 	<div class="slides-wrapper">
-		{#each slides as slide (slide.virtualId)}
-			<div class="slide" class:active={slide.virtualId === currentSlide?.virtualId}>
-				{#if slide.type === 'products'}
-					<SlideProducts {slide} />
-				{:else if slide.type === 'sets'}
-					<SlideSets {slide} />
-				{/if}
-			</div>
-		{/each}
+		{#key currentSlide?.virtualId}
+			{#if currentSlide}
+				<div class="slide active">
+					{#if currentSlide.type === 'products'}
+						<SlideProducts slide={currentSlide} />
+					{:else if currentSlide.type === 'sets'}
+						<SlideSets slide={currentSlide} />
+					{/if}
+				</div>
+			{/if}
+		{/key}
 	</div>
 </div>
 
@@ -218,13 +220,6 @@
 	.slide {
 		position: absolute;
 		inset: 0;
-		opacity: 0;
-		transition: opacity 0.5s ease-in-out;
-		pointer-events: none;
-	}
-
-	.slide.active {
 		opacity: 1;
-		pointer-events: auto;
 	}
 </style>
