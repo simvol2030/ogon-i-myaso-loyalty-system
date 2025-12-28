@@ -25,13 +25,13 @@
 	.products-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-		grid-template-rows: repeat(2, 1fr);
-		grid-auto-rows: 0;
+		grid-template-rows: repeat(2, auto); /* Авто-высота по контенту */
+		grid-auto-rows: 0; /* Скрываем лишние ряды */
 		gap: 1rem;
 		flex: 1;
 		overflow: hidden;
 		align-content: start;
-		align-items: start; /* Карточки не растягиваются по высоте */
+		align-items: start;
 	}
 
 	/* Большие мониторы 1400px+: 8 колонок (синхронизировано с JS capacity=16) */

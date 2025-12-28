@@ -50,6 +50,8 @@
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
+		max-width: 220px; /* Ограничиваем ширину чтобы не растягивалась */
+		width: 100%;
 	}
 
 	.product-card.small {
