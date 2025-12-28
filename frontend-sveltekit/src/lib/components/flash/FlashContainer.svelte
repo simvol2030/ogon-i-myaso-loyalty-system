@@ -20,13 +20,16 @@
 
 	// Расчёт capacity (сколько товаров помещается на экран)
 	function calculateCapacity(width: number): number {
-		if (width >= 1920) return 16;
-		if (width >= 1400) return 12;
+		// TV 1920px: 10 колонок × 2 ряда = 20 товаров
+		if (width >= 1920) return 20;
+		// Desktop 1400px: 8 колонок × 2 ряда = 16 товаров
+		if (width >= 1400) return 16;
+		// Smaller screens: динамический расчёт
 		const cardMinWidth = 160;
 		const gap = 16;
 		const padding = 40;
 		const availableWidth = width - padding;
-		const cols = Math.max(3, Math.min(6, Math.floor(availableWidth / (cardMinWidth + gap))));
+		const cols = Math.max(3, Math.min(8, Math.floor(availableWidth / (cardMinWidth + gap))));
 		return cols * 2;
 	}
 

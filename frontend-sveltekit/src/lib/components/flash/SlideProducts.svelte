@@ -34,17 +34,17 @@
 		align-items: start; /* Карточки не растягиваются по высоте */
 	}
 
-	/* Большие мониторы 1400px+: фиксированные 6 колонок */
+	/* Большие мониторы 1400px+: 8 колонок (синхронизировано с JS capacity=16) */
 	@media (min-width: 1400px) {
 		.products-grid {
-			grid-template-columns: repeat(6, 1fr);
+			grid-template-columns: repeat(8, 1fr);
 		}
 	}
 
-	/* TV 1920px+: фиксированные 8 колонок (синхронизировано с JS capacity=16) */
+	/* TV 1920px+: 10 колонок (синхронизировано с JS capacity=20) */
 	@media (min-width: 1920px) {
 		.products-grid {
-			grid-template-columns: repeat(8, 1fr);
+			grid-template-columns: repeat(10, 1fr);
 			gap: 1.25rem;
 		}
 	}
