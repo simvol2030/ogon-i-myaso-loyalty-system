@@ -26,24 +26,24 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 		grid-template-rows: repeat(2, 1fr);
-		grid-auto-rows: 0; /* Скрыть лишние ряды */
+		grid-auto-rows: 0;
 		gap: 1rem;
 		flex: 1;
-		overflow: hidden; /* Обрезать выходящие за пределы */
+		overflow: hidden;
 		align-content: start;
 	}
 
-	/* Для больших экранов TV - ограничиваем ширину колонок */
+	/* Большие мониторы 1400px+: фиксированные 6 колонок */
 	@media (min-width: 1400px) {
 		.products-grid {
 			grid-template-columns: repeat(6, 1fr);
 		}
 	}
 
-	/* Для очень больших экранов - больше колонок */
+	/* TV 1920px+: фиксированные 8 колонок (синхронизировано с JS capacity=16) */
 	@media (min-width: 1920px) {
 		.products-grid {
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			grid-template-columns: repeat(8, 1fr);
 			gap: 1.25rem;
 		}
 	}

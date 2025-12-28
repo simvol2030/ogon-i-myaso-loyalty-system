@@ -5,40 +5,55 @@
 	import SlideSets from './SlideSets.svelte';
 	import SlideIndicator from './SlideIndicator.svelte';
 
+	// Расширенный тип слайда с virtualId
+	interface VirtualSlide extends Slide {
+		virtualId: string;
+	}
+
 	let { slides: backendSlides, config }: { slides: Slide[]; config: FlashConfig } = $props();
 
 	let currentIndex = $state(0);
-	let intervalId: ReturnType<typeof setInterval>;
+	let intervalId: ReturnType<typeof setInterval> | null = $state(null);
 	let viewportWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1920);
 
 	// Расчёт capacity (сколько товаров помещается на экран)
+	// Синхронизировано с CSS breakpoints в SlideProducts.svelte
 	function calculateCapacity(width: number): number {
+		// TV 1920px+: 8 колонок × 2 ряда = 16 товаров
+		if (width >= 1920) return 16;
+		// Большие мониторы 1400px+: 6 колонок × 2 ряда = 12 товаров
+		if (width >= 1400) return 12;
+		// Средние экраны: динамический расчёт
 		const cardMinWidth = 160;
 		const gap = 16;
-		const padding = 40; // 20px с каждой стороны
+		const padding = 40;
 		const availableWidth = width - padding;
-		const cols = Math.max(3, Math.min(8, Math.floor(availableWidth / (cardMinWidth + gap))));
-		const rows = 2; // Фиксировано 2 ряда
-		return cols * rows;
+		const cols = Math.max(3, Math.min(6, Math.floor(availableWidth / (cardMinWidth + gap))));
+		return cols * 2;
 	}
 
-	// Создание виртуальных слайдов на основе capacity
-	function createVirtualSlides(backendSlides: Slide[], capacity: number): Slide[] {
-		const virtualSlides: Slide[] = [];
+	// Создание виртуальных слайдов с уникальными ID
+	function createVirtualSlides(backendSlides: Slide[], capacity: number): VirtualSlide[] {
+		const virtualSlides: VirtualSlide[] = [];
 
 		for (const slide of backendSlides) {
 			if (slide.type === 'sets') {
-				// Сеты: оставляем как есть (3 на слайд с backend)
-				virtualSlides.push(slide);
+				// Сеты: оставляем как есть, генерируем уникальный ID
+				virtualSlides.push({
+					...slide,
+					virtualId: `sets-${slide.title}-${slide.items.map(i => i.id).join(',')}`
+				});
 				continue;
 			}
 
-			// Products: разбиваем по capacity
+			// Products: разбиваем по capacity с уникальными ID
 			const items = slide.items;
 			for (let i = 0; i < items.length; i += capacity) {
+				const sliceItems = items.slice(i, i + capacity);
 				virtualSlides.push({
 					...slide,
-					items: items.slice(i, i + capacity)
+					items: sliceItems,
+					virtualId: `products-${slide.title}-${i}-${sliceItems.map(item => item.id).join(',')}`
 				});
 			}
 		}
@@ -50,8 +65,13 @@
 	const capacity = $derived(calculateCapacity(viewportWidth));
 	const slides = $derived(createVirtualSlides(backendSlides, capacity));
 
-	// Текущий слайд
-	const currentSlide = $derived(slides[currentIndex]);
+	// Безопасный индекс (защита от undefined)
+	const safeIndex = $derived(
+		slides.length === 0 ? 0 : Math.min(currentIndex, slides.length - 1)
+	);
+
+	// Текущий слайд (теперь безопасный)
+	const currentSlide = $derived(slides[safeIndex]);
 
 	// При изменении количества слайдов - сбросить индекс если вышли за пределы
 	$effect(() => {
@@ -60,19 +80,31 @@
 		}
 	});
 
-	// Автопереключение с учётом динамического количества слайдов
+	// Автопереключение с корректным cleanup
 	$effect(() => {
+		const slideCount = slides.length;
+		
 		// Очищаем предыдущий интервал
-		if (intervalId) {
+		if (intervalId !== null) {
 			clearInterval(intervalId);
+			intervalId = null;
 		}
 
 		// Создаём новый интервал если слайдов больше 1
-		if (slides.length > 1) {
-			intervalId = setInterval(() => {
-				currentIndex = (currentIndex + 1) % slides.length;
+		if (slideCount > 1) {
+			const id = setInterval(() => {
+				currentIndex = (currentIndex + 1) % slideCount;
 			}, config.interval);
+			intervalId = id;
 		}
+
+		// Cleanup при размонтировании или пересоздании эффекта
+		return () => {
+			if (intervalId !== null) {
+				clearInterval(intervalId);
+				intervalId = null;
+			}
+		};
 	});
 
 	onMount(() => {
@@ -99,7 +131,7 @@
 	});
 
 	onDestroy(() => {
-		if (intervalId) {
+		if (intervalId !== null) {
 			clearInterval(intervalId);
 		}
 	});
@@ -109,13 +141,13 @@
 	<!-- Header с названием группы и индикатором -->
 	<header class="flash-header">
 		<h1 class="category-title">{currentSlide?.title || ''}</h1>
-		<SlideIndicator total={slides.length} current={currentIndex} />
+		<SlideIndicator total={slides.length} current={safeIndex} />
 	</header>
 
-	<!-- Слайды -->
+	<!-- Слайды с уникальными ключами -->
 	<div class="slides-wrapper">
-		{#each slides as slide, i (i)}
-			<div class="slide" class:active={i === currentIndex}>
+		{#each slides as slide (slide.virtualId)}
+			<div class="slide" class:active={slide.virtualId === currentSlide?.virtualId}>
 				{#if slide.type === 'products'}
 					<SlideProducts {slide} />
 				{:else if slide.type === 'sets'}
