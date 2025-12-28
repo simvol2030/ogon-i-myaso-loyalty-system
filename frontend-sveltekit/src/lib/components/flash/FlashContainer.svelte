@@ -5,21 +5,82 @@
 	import SlideSets from './SlideSets.svelte';
 	import SlideIndicator from './SlideIndicator.svelte';
 
-	let { slides, config }: { slides: Slide[]; config: FlashConfig } = $props();
+	let { slides: backendSlides, config }: { slides: Slide[]; config: FlashConfig } = $props();
 
 	let currentIndex = $state(0);
 	let intervalId: ReturnType<typeof setInterval>;
+	let viewportWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1920);
+
+	// Расчёт capacity (сколько товаров помещается на экран)
+	function calculateCapacity(width: number): number {
+		const cardMinWidth = 160;
+		const gap = 16;
+		const padding = 40; // 20px с каждой стороны
+		const availableWidth = width - padding;
+		const cols = Math.max(3, Math.min(8, Math.floor(availableWidth / (cardMinWidth + gap))));
+		const rows = 2; // Фиксировано 2 ряда
+		return cols * rows;
+	}
+
+	// Создание виртуальных слайдов на основе capacity
+	function createVirtualSlides(backendSlides: Slide[], capacity: number): Slide[] {
+		const virtualSlides: Slide[] = [];
+
+		for (const slide of backendSlides) {
+			if (slide.type === 'sets') {
+				// Сеты: оставляем как есть (3 на слайд с backend)
+				virtualSlides.push(slide);
+				continue;
+			}
+
+			// Products: разбиваем по capacity
+			const items = slide.items;
+			for (let i = 0; i < items.length; i += capacity) {
+				virtualSlides.push({
+					...slide,
+					items: items.slice(i, i + capacity)
+				});
+			}
+		}
+
+		return virtualSlides;
+	}
+
+	// Реактивные виртуальные слайды
+	const capacity = $derived(calculateCapacity(viewportWidth));
+	const slides = $derived(createVirtualSlides(backendSlides, capacity));
 
 	// Текущий слайд
 	const currentSlide = $derived(slides[currentIndex]);
 
-	// Автопереключение слайдов
-	onMount(() => {
+	// При изменении количества слайдов - сбросить индекс если вышли за пределы
+	$effect(() => {
+		if (currentIndex >= slides.length && slides.length > 0) {
+			currentIndex = 0;
+		}
+	});
+
+	// Автопереключение с учётом динамического количества слайдов
+	$effect(() => {
+		// Очищаем предыдущий интервал
+		if (intervalId) {
+			clearInterval(intervalId);
+		}
+
+		// Создаём новый интервал если слайдов больше 1
 		if (slides.length > 1) {
 			intervalId = setInterval(() => {
 				currentIndex = (currentIndex + 1) % slides.length;
 			}, config.interval);
 		}
+	});
+
+	onMount(() => {
+		// Слушать resize
+		function handleResize() {
+			viewportWidth = window.innerWidth;
+		}
+		window.addEventListener('resize', handleResize);
 
 		// Keyboard navigation для тестирования
 		function handleKeydown(e: KeyboardEvent) {
@@ -32,6 +93,7 @@
 		window.addEventListener('keydown', handleKeydown);
 
 		return () => {
+			window.removeEventListener('resize', handleResize);
 			window.removeEventListener('keydown', handleKeydown);
 		};
 	});
