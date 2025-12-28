@@ -31,6 +31,7 @@
 		flex: 1;
 		overflow: hidden;
 		align-content: start;
+		align-items: start; /* Карточки не растягиваются по высоте */
 	}
 
 	/* Большие мониторы 1400px+: фиксированные 6 колонок */
