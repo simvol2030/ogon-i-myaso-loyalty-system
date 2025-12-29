@@ -287,7 +287,7 @@ router.post('/test-send', requireRole('super-admin', 'editor'), async (req, res)
 			})
 		});
 
-		const result = await response.json();
+		const result = await response.json() as { success: boolean; error?: string };
 
 		if (!response.ok || !result.success) {
 			return res.status(400).json({
