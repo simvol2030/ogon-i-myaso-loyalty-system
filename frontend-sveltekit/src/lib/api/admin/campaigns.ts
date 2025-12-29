@@ -195,6 +195,24 @@ export const campaignsAPI = {
 	},
 
 	/**
+	 * Тестовая отправка рассылки конкретному пользователю
+	 */
+	async testSend(params: {
+		cardNumber?: string;
+		telegramId?: string;
+		messageText: string;
+		messageImage?: string | null;
+		buttonText?: string | null;
+		buttonUrl?: string | null;
+	}): Promise<{ chatId: number; userName: string }> {
+		const data = await fetchWithSession(`${API_BASE_URL}/admin/campaigns/test-send`, {
+			method: 'POST',
+			body: JSON.stringify(params)
+		});
+		return data.data as { chatId: number; userName: string };
+	},
+
+	/**
 	 * Загрузить изображение
 	 */
 	async uploadImage(file: File) {

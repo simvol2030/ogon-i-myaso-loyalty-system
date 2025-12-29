@@ -32,6 +32,11 @@
 	let broadcastResult = $state<{ success: boolean; sent: number; failed: number; message: string } | null>(null);
 	let savedPromotionId = $state<number | null>(null);
 
+	// Test send state
+	let testCardNumber = $state('');
+	let testSending = $state(false);
+	let testResult = $state<{ success: boolean; message: string } | null>(null);
+
 	let imagePreview = $state<string | null>(null);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
@@ -267,6 +272,49 @@
 		}
 	};
 
+	const handleTestSend = async () => {
+		if (!testCardNumber.trim()) {
+			testResult = { success: false, message: 'Введите номер карты' };
+			return;
+		}
+
+		// Auto-generate message if empty
+		let messageToSend = broadcastMessage;
+		if (!messageToSend && formData.title) {
+			messageToSend = `🎉 ${formData.title}\n\n${formData.description || ''}\n\n⏰ Срок: ${formData.deadline || 'Успейте воспользоваться!'}`;
+		}
+
+		if (!messageToSend) {
+			testResult = { success: false, message: 'Заполните текст рассылки' };
+			return;
+		}
+
+		testSending = true;
+		testResult = null;
+
+		try {
+			const result = await campaignsAPI.testSend({
+				cardNumber: testCardNumber.trim(),
+				messageText: messageToSend,
+				messageImage: formData.image || null,
+				buttonText: 'Подробнее',
+				buttonUrl: '/offers'
+			});
+
+			testResult = {
+				success: true,
+				message: `Тестовое сообщение отправлено: ${result.userName}`
+			};
+		} catch (err: any) {
+			testResult = {
+				success: false,
+				message: err.message || 'Ошибка отправки тестового сообщения'
+			};
+		} finally {
+			testSending = false;
+		}
+	};
+
 	// FIX #3: Prevent modal from closing when Delete/Backspace is pressed
 	const handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -417,6 +465,37 @@
 								<span class="preview-label">🖼️ Изображение акции будет приложено к рассылке</span>
 							</div>
 						{/if}
+
+						<!-- Test Send Section -->
+						<div class="test-send-section">
+							<div class="test-send-header">🧪 Тестовая отправка</div>
+							<div class="test-send-row">
+								<input
+									type="text"
+									class="test-input"
+									placeholder="Номер карты (например: 633456)"
+									bind:value={testCardNumber}
+									maxlength="10"
+								/>
+								<button
+									type="button"
+									class="test-send-btn"
+									onclick={handleTestSend}
+									disabled={testSending || !testCardNumber.trim()}
+								>
+									{#if testSending}
+										<span class="spinner-small"></span>
+									{:else}
+										🧪 Тест
+									{/if}
+								</button>
+							</div>
+							{#if testResult}
+								<div class="test-result" class:success={testResult.success} class:error={!testResult.success}>
+									{testResult.success ? '✅' : '❌'} {testResult.message}
+								</div>
+							{/if}
+						</div>
 
 						<!-- Send Broadcast Button -->
 						<div class="broadcast-actions">
@@ -859,9 +938,98 @@
 		animation: spin 0.8s linear infinite;
 	}
 
+	.spinner-small {
+		width: 0.875rem;
+		height: 0.875rem;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
 		}
+	}
+
+	/* Test Send Section */
+	.test-send-section {
+		margin-top: 1rem;
+		padding: 1rem;
+		background: #fffbeb;
+		border: 1px solid #fbbf24;
+		border-radius: 0.5rem;
+	}
+
+	.test-send-header {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #92400e;
+		margin-bottom: 0.75rem;
+	}
+
+	.test-send-row {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.test-input {
+		flex: 1;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid #d1d5db;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+	}
+
+	.test-input:focus {
+		outline: none;
+		border-color: #f59e0b;
+		box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+	}
+
+	.test-send-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.375rem;
+		padding: 0.5rem 1rem;
+		background: #f59e0b;
+		color: white;
+		border: none;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.2s;
+		min-width: 80px;
+	}
+
+	.test-send-btn:hover:not(:disabled) {
+		background: #d97706;
+	}
+
+	.test-send-btn:disabled {
+		background: #9ca3af;
+		cursor: not-allowed;
+	}
+
+	.test-result {
+		margin-top: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+	}
+
+	.test-result.success {
+		background: #ecfdf5;
+		color: #059669;
+		border: 1px solid #10b981;
+	}
+
+	.test-result.error {
+		background: #fef2f2;
+		color: #dc2626;
+		border: 1px solid #ef4444;
 	}
 </style>
