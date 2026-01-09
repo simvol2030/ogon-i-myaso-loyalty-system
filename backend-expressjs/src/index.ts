@@ -56,6 +56,7 @@ import adminWelcomeMessagesRouter from './routes/admin/welcome-messages'; // Wel
 import adminFeedRouter from './routes/admin/feed'; // Feed admin API
 import adminStoriesRouter from './routes/admin/stories'; // Web Stories management
 import adminDeliveryLocationsRouter from './routes/admin/delivery-locations'; // Delivery locations management
+import adminFreeDeliverySettingsRouter from './routes/admin/free-delivery-settings'; // Free delivery settings
 
 // Public Stories API
 import storiesRouter from './routes/stories';
@@ -166,6 +167,7 @@ app.use('/api/admin/welcome-messages', adminWelcomeMessagesRouter); // Welcome m
 app.use('/api/admin/feed', adminFeedRouter); // Feed/Лента admin API
 app.use('/api/admin/stories', adminStoriesRouter); // Web Stories management
 app.use('/api/admin/delivery-locations', adminDeliveryLocationsRouter); // Delivery locations management
+app.use('/api/admin/free-delivery-settings', adminFreeDeliverySettingsRouter); // Free delivery settings
 
 // Обработка 404
 app.use((req, res) => {

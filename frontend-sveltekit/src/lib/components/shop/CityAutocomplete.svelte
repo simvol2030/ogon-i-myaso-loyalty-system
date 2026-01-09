@@ -6,7 +6,8 @@
 		value: string;
 		selectedLocationId?: number | null;
 		deliveryPrice?: number;
-		oninput: (cityName: string, locationId: number | null, price: number) => void;
+		freeDeliveryThreshold?: number | null;
+		oninput: (cityName: string, locationId: number | null, price: number, freeThreshold: number | null) => void;
 		placeholder?: string;
 		required?: boolean;
 	}
@@ -15,6 +16,7 @@
 		value = $bindable(''),
 		selectedLocationId = $bindable<number | null>(null),
 		deliveryPrice = $bindable(0),
+		freeDeliveryThreshold = $bindable<number | null>(null),
 		oninput,
 		placeholder = 'Выберите город или начните вводить...',
 		required = false
@@ -25,6 +27,7 @@
 		id: number;
 		name: string;
 		price: number;
+		free_delivery_threshold: number | null;
 	}
 
 	// State
@@ -75,12 +78,13 @@
 		// Clear selection when user types
 		selectedLocationId = null;
 		deliveryPrice = 0;
+		freeDeliveryThreshold = null;
 
 		filterLocations(value);
 		isOpen = filteredLocations.length > 0;
 
 		// Notify parent of change
-		oninput(value, null, 0);
+		oninput(value, null, 0, null);
 	}
 
 	// Handle location selection
@@ -88,11 +92,12 @@
 		value = location.name;
 		selectedLocationId = location.id;
 		deliveryPrice = location.price;
+		freeDeliveryThreshold = location.free_delivery_threshold;
 		isOpen = false;
 		filteredLocations = [];
 
 		// Notify parent of selection
-		oninput(location.name, location.id, location.price);
+		oninput(location.name, location.id, location.price, location.free_delivery_threshold);
 	}
 
 	// Handle keyboard navigation

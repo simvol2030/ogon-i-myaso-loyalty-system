@@ -20,6 +20,7 @@ export interface DeliveryLocation {
 	id: number;
 	name: string;
 	price: number; // kopeks
+	free_delivery_threshold: number | null; // rubles, null = not participating
 	is_enabled: boolean;
 	created_at: string;
 	updated_at: string;
@@ -40,12 +41,14 @@ export interface CreateLocationData {
 	name: string;
 	price: number; // kopeks
 	is_enabled?: boolean;
+	free_delivery_threshold?: number | null; // rubles
 }
 
 export interface UpdateLocationData {
 	name?: string;
 	price?: number; // kopeks
 	is_enabled?: boolean;
+	free_delivery_threshold?: number | null; // rubles
 }
 
 export const deliveryLocationsAPI = {

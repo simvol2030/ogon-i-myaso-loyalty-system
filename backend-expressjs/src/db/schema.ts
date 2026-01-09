@@ -686,14 +686,41 @@ export const deliveryLocations = sqliteTable('delivery_locations', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	name: text('name').notNull(), // Название населенного пункта (например, "Пушкино (центр/арманд/запад)")
 	price: integer('price').notNull(), // Цена доставки в копейках (700 руб = 70000 копеек)
+	free_delivery_threshold: integer('free_delivery_threshold'), // Порог бесплатной доставки в рублях (null = не участвует)
 	is_enabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
 	created_at: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 	updated_at: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`)
 }, (table) => ({
 	nameIdx: index('idx_delivery_locations_name').on(table.name),
 	enabledIdx: index('idx_delivery_locations_enabled').on(table.is_enabled),
-	enabledNameIdx: index('idx_delivery_locations_enabled_name').on(table.is_enabled, table.name)
+	enabledNameIdx: index('idx_delivery_locations_enabled_name').on(table.is_enabled, table.name),
+	thresholdIdx: index('idx_delivery_locations_threshold').on(table.free_delivery_threshold)
 }));
+
+/**
+ * Free Delivery Settings table - настройки бесплатной доставки
+ * Singleton таблица (всегда 1 запись с id=1)
+ */
+export const freeDeliverySettings = sqliteTable('free_delivery_settings', {
+	id: integer('id').primaryKey().$default(() => 1),
+
+	// Глобальные настройки
+	is_enabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
+	default_threshold: integer('default_threshold').notNull().default(3000), // в рублях
+
+	// Виджет на главной
+	widget_enabled: integer('widget_enabled', { mode: 'boolean' }).notNull().default(true),
+	widget_title: text('widget_title').notNull().default('Бесплатная доставка'),
+	widget_text: text('widget_text').notNull().default('При заказе от {threshold}₽ доставка бесплатная в выбранные населённые пункты'),
+	widget_icon: text('widget_icon').notNull().default('🚚'),
+
+	// Toast при добавлении в корзину
+	toast_enabled: integer('toast_enabled', { mode: 'boolean' }).notNull().default(true),
+	toast_text: text('toast_text').notNull().default('Добавьте ещё на {remaining}₽ — доставка может быть бесплатной!'),
+	toast_show_threshold: integer('toast_show_threshold').notNull().default(500), // показывать когда осталось <= X рублей
+
+	updated_at: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+});
 
 /**
  * Order Status History table - история изменений статуса заказа
@@ -855,6 +882,9 @@ export type NewShopSettings = typeof shopSettings.$inferInsert;
 
 export type DeliveryLocation = typeof deliveryLocations.$inferSelect;
 export type NewDeliveryLocation = typeof deliveryLocations.$inferInsert;
+
+export type FreeDeliverySettings = typeof freeDeliverySettings.$inferSelect;
+export type NewFreeDeliverySettings = typeof freeDeliverySettings.$inferInsert;
 
 export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
 export type NewOrderStatusHistory = typeof orderStatusHistory.$inferInsert;

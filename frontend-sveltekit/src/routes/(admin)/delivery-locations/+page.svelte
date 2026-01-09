@@ -27,6 +27,8 @@
 	let formName = $state('');
 	let formPrice = $state('');
 	let formEnabled = $state(true);
+	let formFreeDelivery = $state(false); // Checkbox for participating in free delivery
+	let formThreshold = $state(''); // Threshold in rubles
 	let formSubmitting = $state(false);
 
 	// Delete confirmation
@@ -96,6 +98,8 @@
 		formName = '';
 		formPrice = '';
 		formEnabled = true;
+		formFreeDelivery = false;
+		formThreshold = '';
 		editingLocation = null;
 		showModal = true;
 	}
@@ -106,6 +110,8 @@
 		formName = location.name;
 		formPrice = (location.price / 100).toString(); // Convert kopeks to rubles
 		formEnabled = location.is_enabled;
+		formFreeDelivery = location.free_delivery_threshold !== null;
+		formThreshold = location.free_delivery_threshold !== null ? location.free_delivery_threshold.toString() : '';
 		editingLocation = location;
 		showModal = true;
 	}
@@ -116,6 +122,8 @@
 		formName = '';
 		formPrice = '';
 		formEnabled = true;
+		formFreeDelivery = false;
+		formThreshold = '';
 		editingLocation = null;
 	}
 
@@ -132,6 +140,20 @@
 			return;
 		}
 
+		// Validate threshold if free delivery is enabled
+		let thresholdValue: number | null = null;
+		if (formFreeDelivery) {
+			if (!formThreshold || formThreshold.toString().trim() === '') {
+				error = 'Укажите порог бесплатной доставки';
+				return;
+			}
+			thresholdValue = parseFloat(formThreshold.toString());
+			if (isNaN(thresholdValue) || thresholdValue < 0) {
+				error = 'Неверный порог бесплатной доставки';
+				return;
+			}
+		}
+
 		formSubmitting = true;
 		error = '';
 		success = '';
@@ -143,14 +165,16 @@
 				await deliveryLocationsAPI.create({
 					name: formName.trim(),
 					price: priceInKopeks,
-					is_enabled: formEnabled
+					is_enabled: formEnabled,
+					free_delivery_threshold: thresholdValue
 				});
 				success = 'Локация добавлена успешно';
 			} else if (editingLocation) {
 				await deliveryLocationsAPI.update(editingLocation.id, {
 					name: formName.trim(),
 					price: priceInKopeks,
-					is_enabled: formEnabled
+					is_enabled: formEnabled,
+					free_delivery_threshold: thresholdValue
 				});
 				success = 'Локация обновлена успешно';
 			}
@@ -271,6 +295,7 @@
 						<th>ID</th>
 						<th>Название</th>
 						<th>Цена доставки</th>
+						<th>Бесплатная доставка</th>
 						<th>Статус</th>
 						<th>Дата создания</th>
 						<th>Действия</th>
@@ -282,6 +307,15 @@
 							<td>{location.id}</td>
 							<td class="location-name">{location.name}</td>
 							<td class="price">{formatPrice(location.price)} ₽</td>
+							<td>
+								{#if location.free_delivery_threshold !== null}
+									<span class="free-delivery-badge" title="Бесплатная доставка от {location.free_delivery_threshold.toLocaleString('ru-RU')} ₽">
+										🚚 от {location.free_delivery_threshold.toLocaleString('ru-RU')} ₽
+									</span>
+								{:else}
+									<span class="no-free-delivery">—</span>
+								{/if}
+							</td>
 							<td>
 								<button
 									class="status-badge"
@@ -376,6 +410,31 @@
 						Включить локацию
 					</label>
 				</div>
+
+				<div class="form-section-divider"></div>
+
+				<div class="form-group checkbox-group">
+					<label>
+						<input type="checkbox" bind:checked={formFreeDelivery} />
+						Участвует в акции бесплатной доставки
+					</label>
+				</div>
+
+				{#if formFreeDelivery}
+					<div class="form-group threshold-field">
+						<label for="threshold">Порог бесплатной доставки (₽) *</label>
+						<input
+							type="number"
+							id="threshold"
+							bind:value={formThreshold}
+							placeholder="3000"
+							step="1"
+							min="0"
+							required
+						/>
+						<small>Бесплатная доставка при заказе от этой суммы</small>
+					</div>
+				{/if}
 
 				<div class="modal-actions">
 					<button type="button" class="btn btn-secondary" onclick={closeModal}>
@@ -514,7 +573,7 @@
 	}
 
 	.table-container {
-		background: white;
+		background: var(--card-bg, var(--bg-white));
 		border-radius: 12px;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 		overflow: hidden;
@@ -558,6 +617,23 @@
 	.price {
 		font-weight: 600;
 		color: var(--primary-orange);
+	}
+
+	.free-delivery-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		padding: 4px 10px;
+		background: linear-gradient(135deg, #fef3c7, #fde68a);
+		color: #92400e;
+		border-radius: 12px;
+		font-size: 12px;
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.no-free-delivery {
+		color: var(--text-tertiary);
 	}
 
 	.date {
@@ -684,7 +760,7 @@
 	}
 
 	.modal-content {
-		background: white;
+		background: var(--card-bg, var(--bg-white));
 		border-radius: 16px;
 		padding: 24px;
 		max-width: 500px;
@@ -784,6 +860,21 @@
 		width: 18px;
 		height: 18px;
 		cursor: pointer;
+	}
+
+	.form-section-divider {
+		height: 1px;
+		background: var(--border-color);
+		margin: 16px 0;
+	}
+
+	.threshold-field {
+		animation: slideDown 0.2s ease;
+	}
+
+	@keyframes slideDown {
+		from { opacity: 0; transform: translateY(-10px); }
+		to { opacity: 1; transform: translateY(0); }
 	}
 
 	.modal-actions {

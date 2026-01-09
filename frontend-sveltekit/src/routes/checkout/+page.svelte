@@ -19,6 +19,7 @@
 	let deliveryCity = $state('');
 	let deliveryLocationId = $state<number | null>(null);
 	let deliveryLocationPrice = $state(0);
+	let deliveryLocationThreshold = $state<number | null>(null);
 	let deliveryAddress = $state('');
 	let deliveryEntrance = $state('');
 	let deliveryFloor = $state('');
@@ -36,7 +37,12 @@
 	const deliveryCost = $derived(() => {
 		if (!settings) return 0;
 		if (deliveryType === 'pickup') return 0;
+
+		// Check global free delivery threshold first
 		if (settings.freeDeliveryFrom && subtotal >= settings.freeDeliveryFrom) return 0;
+
+		// Check location-specific free delivery threshold
+		if (deliveryLocationThreshold !== null && subtotal >= deliveryLocationThreshold) return 0;
 
 		// Use location-specific price if available, otherwise use global delivery cost
 		if (deliveryLocationId !== null && deliveryLocationPrice > 0) {
@@ -44,6 +50,18 @@
 		}
 
 		return settings.deliveryCost;
+	});
+
+	// Check if location has free delivery available
+	const locationHasFreeDelivery = $derived(() => {
+		return deliveryLocationThreshold !== null;
+	});
+
+	// Calculate remaining for free delivery
+	const remainingForFreeDelivery = $derived(() => {
+		if (deliveryLocationThreshold === null) return null;
+		const remaining = deliveryLocationThreshold - subtotal;
+		return remaining > 0 ? remaining : 0;
 	});
 
 	const total = $derived(subtotal + deliveryCost());
@@ -113,10 +131,11 @@
 	}
 
 	// City autocomplete handler
-	function handleCitySelection(cityName: string, locationId: number | null, price: number) {
+	function handleCitySelection(cityName: string, locationId: number | null, price: number, freeThreshold: number | null) {
 		deliveryCity = cityName;
 		deliveryLocationId = locationId;
 		deliveryLocationPrice = price;
+		deliveryLocationThreshold = freeThreshold;
 	}
 
 	// Submit order
@@ -279,13 +298,26 @@
 								bind:value={deliveryCity}
 								bind:selectedLocationId={deliveryLocationId}
 								bind:deliveryPrice={deliveryLocationPrice}
+								bind:freeDeliveryThreshold={deliveryLocationThreshold}
 								oninput={handleCitySelection}
 								placeholder="Начните вводить название..."
 							/>
-							{#if deliveryLocationId !== null && deliveryLocationPrice > 0}
-								<span class="delivery-price-hint">
-									Доставка: {(deliveryLocationPrice / 100).toLocaleString('ru-RU')} ₽
-								</span>
+							{#if deliveryLocationId !== null}
+								{#if locationHasFreeDelivery()}
+									{#if remainingForFreeDelivery() === 0}
+										<span class="free-delivery-active">
+											✅ Бесплатная доставка в {deliveryCity}!
+										</span>
+									{:else if remainingForFreeDelivery() !== null}
+										<span class="free-delivery-hint">
+											🚚 Добавьте ещё на {remainingForFreeDelivery()!.toLocaleString('ru-RU')} ₽ для бесплатной доставки в {deliveryCity}
+										</span>
+									{/if}
+								{:else if deliveryLocationPrice > 0}
+									<span class="delivery-price-hint">
+										Доставка: {(deliveryLocationPrice / 100).toLocaleString('ru-RU')} ₽
+									</span>
+								{/if}
 							{/if}
 						</div>
 
@@ -746,13 +778,18 @@
 	}
 
 	.min-order-warning {
-		background: #fff3cd;
-		color: #856404;
+		background: var(--warning-bg, #fff3cd);
+		color: var(--warning-text, #856404);
 		padding: 12px 16px;
 		border-radius: 12px;
 		margin-bottom: 16px;
 		font-size: 14px;
 		text-align: center;
+	}
+
+	:global(.dark) .min-order-warning {
+		background: #78350f;
+		color: #fef3c7;
 	}
 
 	.submit-btn {
@@ -791,5 +828,37 @@
 		font-size: 13px;
 		color: var(--primary-orange);
 		font-weight: 600;
+	}
+
+	.free-delivery-hint {
+		display: block;
+		margin-top: 8px;
+		padding: 10px 12px;
+		background: linear-gradient(135deg, #fef3c7, #fde68a);
+		border-radius: 8px;
+		font-size: 13px;
+		color: #92400e;
+		font-weight: 500;
+	}
+
+	:global(.dark) .free-delivery-hint {
+		background: linear-gradient(135deg, #78350f, #92400e);
+		color: #fef3c7;
+	}
+
+	.free-delivery-active {
+		display: block;
+		margin-top: 8px;
+		padding: 10px 12px;
+		background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+		border-radius: 8px;
+		font-size: 13px;
+		color: #065f46;
+		font-weight: 600;
+	}
+
+	:global(.dark) .free-delivery-active {
+		background: linear-gradient(135deg, #064e3b, #065f46);
+		color: #d1fae5;
 	}
 </style>

@@ -9,6 +9,7 @@
   import OfferCardCompact from '$lib/components/loyalty/ui/OfferCardCompact.svelte';
   import ProductCard from '$lib/components/loyalty/ui/ProductCard.svelte';
   import ProductDetailSheet from '$lib/components/loyalty/ui/ProductDetailSheet.svelte';
+  import FreeDeliveryWidget from '$lib/components/loyalty/ui/FreeDeliveryWidget.svelte';
 
   let { data } = $props();
 
@@ -48,7 +49,17 @@
 <!-- 2. Web Stories -->
 <StoriesCarousel userId={data.user?.id} />
 
-<!-- 2.5. Snippet магазина -->
+<!-- 2.5. Free Delivery Widget -->
+{#if data.freeDeliveryInfo?.enabled && data.freeDeliveryInfo?.widget?.enabled}
+  <FreeDeliveryWidget
+    threshold={data.freeDeliveryInfo.defaultThreshold}
+    title={data.freeDeliveryInfo.widget.title}
+    text={data.freeDeliveryInfo.widget.text}
+    icon={data.freeDeliveryInfo.widget.icon}
+  />
+{/if}
+
+<!-- 2.6. Snippet магазина -->
 {#if data.store}
   <StoreSnippet store={data.store} />
 {/if}

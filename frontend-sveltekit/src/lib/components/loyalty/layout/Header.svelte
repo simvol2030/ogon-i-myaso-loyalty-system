@@ -64,7 +64,9 @@
 
 <header class="app-header">
   <div class="header-left">
-    <img src={$logoUrl} alt={$appName} class="app-logo" />
+    <a href="/" class="logo-link">
+      <img src={$logoUrl} alt={$appName} class="app-logo" />
+    </a>
     <div class="header-title">
       <span class="store-name">{$appName}</span>
       <span class="header-divider">|</span>
@@ -118,6 +120,13 @@
     gap: 12px;
     flex: 1;
     min-width: 0;
+  }
+
+  .logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    flex-shrink: 0;
   }
 
   .app-logo {

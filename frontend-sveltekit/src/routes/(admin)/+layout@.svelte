@@ -120,6 +120,10 @@
 					<span class="icon">🚚</span>
 					<span>Локации доставки</span>
 				</a>
+				<a href="/delivery-settings" class:active={$page.url.pathname.startsWith('/delivery-settings')} onclick={closeMobileMenu}>
+					<span class="icon">🎁</span>
+					<span>Бесплатная доставка</span>
+				</a>
 				{#if data.user?.role === 'super-admin'}
 					<a href="/settings" class:active={$page.url.pathname === '/settings'} onclick={closeMobileMenu}>
 						<span class="icon">⚙️</span>

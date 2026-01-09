@@ -87,12 +87,13 @@ router.get('/', async (req: Request, res: Response) => {
  * - name: string (required) - Location name
  * - price: number (required) - Delivery price in kopeks
  * - is_enabled: boolean (optional, default: true)
+ * - free_delivery_threshold: number | null (optional) - Free delivery threshold in rubles
  *
  * Returns: Created delivery location
  */
 router.post('/', async (req: Request, res: Response) => {
 	try {
-		const { name, price, is_enabled = true } = req.body;
+		const { name, price, is_enabled = true, free_delivery_threshold } = req.body;
 
 		// Validation
 		if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -123,13 +124,26 @@ router.post('/', async (req: Request, res: Response) => {
 			});
 		}
 
+		// Validate free_delivery_threshold if provided
+		let validatedThreshold: number | null = null;
+		if (free_delivery_threshold !== undefined && free_delivery_threshold !== null) {
+			if (typeof free_delivery_threshold !== 'number' || free_delivery_threshold < 0) {
+				return res.status(400).json({
+					success: false,
+					error: 'Invalid free_delivery_threshold (must be >= 0 or null)'
+				});
+			}
+			validatedThreshold = Math.round(free_delivery_threshold);
+		}
+
 		// Create location
 		const [location] = await db
 			.insert(deliveryLocations)
 			.values({
 				name: name.trim(),
 				price: Math.round(price), // Ensure integer
-				is_enabled: Boolean(is_enabled)
+				is_enabled: Boolean(is_enabled),
+				free_delivery_threshold: validatedThreshold
 			})
 			.returning();
 
@@ -155,13 +169,14 @@ router.post('/', async (req: Request, res: Response) => {
  * - name: string (optional)
  * - price: number (optional)
  * - is_enabled: boolean (optional)
+ * - free_delivery_threshold: number | null (optional) - Free delivery threshold in rubles
  *
  * Returns: Updated delivery location
  */
 router.put('/:id', async (req: Request, res: Response) => {
 	try {
 		const id = parseInt(req.params.id);
-		const { name, price, is_enabled } = req.body;
+		const { name, price, is_enabled, free_delivery_threshold } = req.body;
 
 		if (isNaN(id)) {
 			return res.status(400).json({
@@ -227,6 +242,20 @@ router.put('/:id', async (req: Request, res: Response) => {
 
 		if (is_enabled !== undefined) {
 			updates.is_enabled = Boolean(is_enabled);
+		}
+
+		// Handle free_delivery_threshold - can be set to null to disable
+		if (free_delivery_threshold !== undefined) {
+			if (free_delivery_threshold === null) {
+				updates.free_delivery_threshold = null;
+			} else if (typeof free_delivery_threshold !== 'number' || free_delivery_threshold < 0) {
+				return res.status(400).json({
+					success: false,
+					error: 'Invalid free_delivery_threshold (must be >= 0 or null)'
+				});
+			} else {
+				updates.free_delivery_threshold = Math.round(free_delivery_threshold);
+			}
 		}
 
 		if (Object.keys(updates).length === 0) {
