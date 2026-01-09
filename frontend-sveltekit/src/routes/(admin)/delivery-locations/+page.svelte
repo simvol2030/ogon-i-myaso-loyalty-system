@@ -288,7 +288,8 @@
 			<p>Локации не найдены</p>
 		</div>
 	{:else}
-		<div class="table-container">
+		<!-- Desktop: Table view -->
+		<div class="table-container desktop-only">
 			<table class="locations-table">
 				<thead>
 					<tr>
@@ -340,6 +341,61 @@
 					{/each}
 				</tbody>
 			</table>
+		</div>
+
+		<!-- Mobile: Card view -->
+		<div class="cards-container mobile-only">
+			{#each locations as location (location.id)}
+				<div class="location-card">
+					<div class="card-header">
+						<div class="card-title">
+							<span class="card-id">#{location.id}</span>
+							<span class="card-name">{location.name}</span>
+						</div>
+						<div class="card-actions">
+							<button class="btn-icon btn-edit" onclick={() => openEditModal(location)} title="Редактировать">
+								✏️
+							</button>
+							<button class="btn-icon btn-delete" onclick={() => confirmDelete(location.id)} title="Удалить">
+								🗑️
+							</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="card-row">
+							<span class="card-label">Цена доставки:</span>
+							<span class="card-value price">{formatPrice(location.price)} ₽</span>
+						</div>
+						<div class="card-row">
+							<span class="card-label">Бесплатная доставка:</span>
+							<span class="card-value">
+								{#if location.free_delivery_threshold !== null}
+									<span class="free-delivery-badge">
+										🚚 от {location.free_delivery_threshold.toLocaleString('ru-RU')} ₽
+									</span>
+								{:else}
+									<span class="no-free-delivery">—</span>
+								{/if}
+							</span>
+						</div>
+						<div class="card-row">
+							<span class="card-label">Статус:</span>
+							<button
+								class="status-badge"
+								class:enabled={location.is_enabled}
+								class:disabled={!location.is_enabled}
+								onclick={() => toggleEnabled(location)}
+							>
+								{location.is_enabled ? 'Включено' : 'Отключено'}
+							</button>
+						</div>
+						<div class="card-row">
+							<span class="card-label">Создано:</span>
+							<span class="card-value date">{new Date(location.created_at).toLocaleDateString('ru-RU')}</span>
+						</div>
+					</div>
+				</div>
+			{/each}
 		</div>
 
 		<!-- Pagination -->
@@ -882,5 +938,195 @@
 		gap: 12px;
 		justify-content: flex-end;
 		margin-top: 24px;
+	}
+
+	/* Mobile/Desktop visibility */
+	.desktop-only {
+		display: block;
+	}
+
+	.mobile-only {
+		display: none;
+	}
+
+	/* Mobile Card Styles */
+	.cards-container {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		margin-bottom: 24px;
+	}
+
+	.location-card {
+		background: var(--card-bg, var(--bg-white));
+		border-radius: 12px;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+		overflow: hidden;
+	}
+
+	.card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 12px 16px;
+		background: var(--bg-light);
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.card-title {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.card-id {
+		font-size: 12px;
+		color: var(--text-secondary);
+		font-weight: 500;
+	}
+
+	.card-name {
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+
+	.card-actions {
+		display: flex;
+		gap: 8px;
+	}
+
+	.card-body {
+		padding: 12px 16px;
+	}
+
+	.card-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 8px 0;
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.card-row:last-child {
+		border-bottom: none;
+	}
+
+	.card-label {
+		font-size: 13px;
+		color: var(--text-secondary);
+	}
+
+	.card-value {
+		font-size: 14px;
+		color: var(--text-primary);
+	}
+
+	.card-value.price {
+		font-weight: 600;
+		color: var(--primary-orange);
+	}
+
+	.card-value.date {
+		color: var(--text-secondary);
+		font-size: 13px;
+	}
+
+	/* Mobile Responsive Styles */
+	@media (max-width: 900px) {
+		.desktop-only {
+			display: none;
+		}
+
+		.mobile-only {
+			display: flex;
+		}
+
+		.page-container {
+			padding: 16px;
+		}
+
+		.page-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 12px;
+		}
+
+		.page-header h1 {
+			font-size: 22px;
+		}
+
+		.page-header .btn {
+			width: 100%;
+		}
+
+		.filters-section {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.search-box {
+			min-width: auto;
+		}
+
+		.filter-group {
+			justify-content: space-between;
+		}
+
+		.filter-select {
+			flex: 1;
+		}
+
+		.pagination {
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.page-info {
+			order: -1;
+		}
+
+		.pagination .btn {
+			width: 100%;
+		}
+
+		/* Modal adjustments for mobile */
+		.modal-content {
+			width: 95%;
+			max-height: 95vh;
+			padding: 16px;
+		}
+
+		.modal-actions {
+			flex-direction: column;
+		}
+
+		.modal-actions .btn {
+			width: 100%;
+		}
+	}
+
+	/* Small phones */
+	@media (max-width: 400px) {
+		.page-container {
+			padding: 12px;
+		}
+
+		.card-header {
+			padding: 10px 12px;
+		}
+
+		.card-body {
+			padding: 10px 12px;
+		}
+
+		.card-name {
+			font-size: 14px;
+		}
+
+		.free-delivery-badge {
+			font-size: 11px;
+			padding: 3px 8px;
+		}
 	}
 </style>
