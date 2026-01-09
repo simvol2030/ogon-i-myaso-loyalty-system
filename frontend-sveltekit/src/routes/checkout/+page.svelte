@@ -369,6 +369,9 @@
 							-->
 						</div>
 
+						<!-- TEMPORARILY HIDDEN: Intercom field -->
+						<!-- To restore: uncomment the form-group block below -->
+						<!--
 						<div class="form-group">
 							<label for="intercom">Домофон</label>
 							<input
@@ -378,6 +381,7 @@
 								placeholder="42#"
 							/>
 						</div>
+						-->
 					</div>
 				{/if}
 
