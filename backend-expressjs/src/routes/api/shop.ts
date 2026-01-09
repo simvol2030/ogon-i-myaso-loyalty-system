@@ -113,7 +113,7 @@ router.get('/settings', async (req, res) => {
  *
  * Get free delivery information for frontend display
  *
- * Returns: Free delivery settings including widget and toast config
+ * Returns: Free delivery settings including widget, toast config, and participating locations
  */
 router.get('/free-delivery-info', async (req, res) => {
 	try {
@@ -142,19 +142,25 @@ router.get('/free-delivery-info', async (req, res) => {
 						text: 'Добавьте ещё на {remaining}₽ — доставка может быть бесплатной!',
 						showThreshold: 500
 					},
+					locations: [],
 					locationsCount: 0
 				}
 			});
 		}
 
-		// Count locations with free delivery threshold
-		const [{ count }] = await db
-			.select({ count: sql<number>`count(*)` })
+		// Get locations with free delivery threshold
+		const locations = await db
+			.select({
+				id: deliveryLocations.id,
+				name: deliveryLocations.name,
+				threshold: deliveryLocations.free_delivery_threshold
+			})
 			.from(deliveryLocations)
 			.where(and(
 				eq(deliveryLocations.is_enabled, true),
 				isNotNull(deliveryLocations.free_delivery_threshold)
-			));
+			))
+			.orderBy(deliveryLocations.name);
 
 		res.json({
 			success: true,
@@ -172,7 +178,8 @@ router.get('/free-delivery-info', async (req, res) => {
 					text: settings.toast_text,
 					showThreshold: settings.toast_show_threshold
 				},
-				locationsCount: count
+				locations: locations,
+				locationsCount: locations.length
 			}
 		});
 	} catch (error) {

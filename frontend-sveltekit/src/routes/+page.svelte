@@ -56,6 +56,7 @@
     title={data.freeDeliveryInfo.widget.title}
     text={data.freeDeliveryInfo.widget.text}
     icon={data.freeDeliveryInfo.widget.icon}
+    locations={data.freeDeliveryInfo.locations || []}
   />
 {/if}
 
