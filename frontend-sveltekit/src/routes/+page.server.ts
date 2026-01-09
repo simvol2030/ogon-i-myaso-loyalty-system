@@ -23,6 +23,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
       text: 'Добавьте ещё на {remaining}₽ — доставка может быть бесплатной!',
       showThreshold: 500
     },
+    locations: [],
     locationsCount: 0
   };
 
