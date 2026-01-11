@@ -159,7 +159,13 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
       },
       productsLabel: s.products_label,
       productsIcon: s.products_icon,
-      headerPhone: s.header_phone
+      headerPhone: s.header_phone,
+      // Stories (Highlights) customization
+      stories: {
+        borderColor: s.stories_border_color || '#ff6b00',
+        titleColorLight: s.stories_title_color_light || '#374151',
+        titleColorDark: s.stories_title_color_dark || '#ffffff'
+      }
     };
   }
 

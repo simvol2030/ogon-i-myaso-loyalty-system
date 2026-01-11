@@ -37,7 +37,8 @@
       colors: { ...defaultCustomization.colors, ...(serverData.colors || {}) },
       darkTheme: { ...defaultCustomization.darkTheme, ...(serverData.darkTheme || {}) },
       navigation: serverData.navigation || defaultCustomization.navigation,
-      loyaltyCard: { ...defaultCustomization.loyaltyCard, ...(serverData.loyaltyCard || {}) }
+      loyaltyCard: { ...defaultCustomization.loyaltyCard, ...(serverData.loyaltyCard || {}) },
+      stories: { ...defaultCustomization.stories, ...(serverData.stories || {}) }
     };
     customization.set(mergedData);
     applyCustomStyles(mergedData);
