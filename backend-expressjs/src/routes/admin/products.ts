@@ -15,6 +15,7 @@ import { eq, and, desc, like, sql, asc } from 'drizzle-orm';
 import { authenticateSession, requireRole } from '../../middleware/session-auth';
 import { validateProductData } from '../../utils/validation';
 import { parse as csvParse } from 'csv-parse/sync';
+import { stringify as csvStringify } from 'csv-stringify/sync';
 import {
 	getVariationsByProductId,
 	getVariationById,
@@ -34,6 +35,59 @@ const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'products');
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOADS_DIR)) {
 	fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Constants for image handling
+const PLACEHOLDER_IMAGE = '/api/uploads/products/placeholder.webp';
+const NO_IMAGE_MARKER = '[no_image]';
+
+/**
+ * Helper: Simplify image path for export
+ * /api/uploads/products/file.webp -> file.webp
+ * Placeholder or empty -> [no_image]
+ */
+function simplifyImagePath(imagePath: string | null): string {
+	if (!imagePath || imagePath === PLACEHOLDER_IMAGE) return NO_IMAGE_MARKER;
+	const prefix = '/api/uploads/products/';
+	if (imagePath.startsWith(prefix)) {
+		return imagePath.substring(prefix.length);
+	}
+	return imagePath;
+}
+
+/**
+ * Helper: Normalize image path for import
+ * file.webp -> /api/uploads/products/file.webp
+ * Full paths and URLs are kept as-is
+ * Empty or [no_image] -> placeholder
+ */
+function normalizeImagePath(imagePath: string | null | undefined): string {
+	if (!imagePath || imagePath.trim() === '' || imagePath === NO_IMAGE_MARKER) {
+		return PLACEHOLDER_IMAGE;
+	}
+	const trimmed = imagePath.trim();
+	if (trimmed.startsWith('/') || trimmed.startsWith('http')) {
+		return trimmed;
+	}
+	return `/api/uploads/products/${trimmed}`;
+}
+
+/**
+ * Helper: Format variations for CSV export
+ * Output: "25см:250|30см:350:400" (name:price or name:price:oldPrice)
+ */
+function formatVariationsForExport(variations: any[]): string {
+	if (!variations || variations.length === 0) return '';
+	return variations
+		.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+		.map(v => {
+			let str = `${v.name}:${v.price}`;
+			if (v.old_price !== null && v.old_price !== undefined) {
+				str += `:${v.old_price}`;
+			}
+			return str;
+		})
+		.join('|');
 }
 
 // Multer configuration - store in memory for processing
@@ -809,7 +863,7 @@ function normalizeRow(row: ImportProductRow) {
 		price: parseNumber(row.price),
 		oldPrice: parseNumber(row.oldPrice ?? row.old_price),
 		quantityInfo: (row.quantityInfo ?? row.quantity_info)?.trim() || null,
-		image: row.image?.trim() || null,
+		image: normalizeImagePath(row.image),
 		category: row.category?.trim() || null,
 		categoryId: parseNumber(row.categoryId ?? row.category_id),
 		sku: row.sku?.trim() || null,
@@ -916,7 +970,10 @@ router.post('/import', requireRole('super-admin', 'editor'), importUpload.single
 				// Apply defaults and auto-create category
 				const categoryPath = normalized.category || defaultCategory || '';
 				const { categoryId, categoryName } = await findOrCreateCategoryByPath(categoryPath);
-				const image = normalized.image || defaultImage || '/api/uploads/products/placeholder.webp';
+				// Use normalized image, or defaultImage if provided, or placeholder
+				const image = (normalized.image !== PLACEHOLDER_IMAGE ? normalized.image : null)
+					|| normalizeImagePath(defaultImage)
+					|| PLACEHOLDER_IMAGE;
 
 				const productData = {
 					name: normalized.name,
@@ -1030,7 +1087,7 @@ router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) 
 				price: 100.00,
 				oldPrice: 120.00,
 				quantityInfo: '100г',
-				image: '/api/uploads/products/example.webp',
+				image: 'example.webp',
 				category: 'Категория',
 				sku: 'SKU-001',
 				isActive: true,
@@ -1041,7 +1098,7 @@ router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) 
 				name: 'Пицца Маргарита',
 				description: 'Классическая пицца с томатами и моцареллой',
 				price: 450.00,
-				image: '/api/uploads/products/pizza.webp',
+				image: 'pizza.webp',
 				category: 'Еда > Пицца',
 				sku: 'PIZZA-001',
 				isActive: true,
@@ -1059,6 +1116,7 @@ router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) 
 				description: 'Красное сухое вино',
 				price: 1200.00,
 				oldPrice: 1500.00,
+				image: '[no_image]',
 				category: 'Напитки > Вина > Красные',
 				sku: 'WINE-001',
 				isActive: true
@@ -1070,16 +1128,144 @@ router.get('/import/template', requireRole('super-admin', 'editor'), (req, res) 
 		res.send(JSON.stringify(template, null, 2));
 	} else {
 		// CSV format with variations and category hierarchy examples
+		// Image paths can be: filename.webp, [no_image], or full URL
 		const csvContent = `name,description,price,oldPrice,quantityInfo,image,category,sku,isActive,showOnHome,isRecommendation,variationAttribute,variations
-"Товар без вариаций","Описание товара",100.00,120.00,"100г","/api/uploads/products/example.webp","Категория","SKU-001",true,false,false,,
-"Пицца Маргарита","Классическая пицца",450.00,,,"","Еда > Пицца","PIZZA-001",true,true,false,"Размер","25 см:350|30 см:450|35 см:550:600"
-"Кофе Латте","Классический латте",200.00,,,,"Напитки > Кофе","COFFEE-001",true,false,false,"Объём","250мл:150|350мл:200|500мл:280"
-"Каберне Совиньон","Красное сухое вино",1200.00,1500.00,,,"Напитки > Вина > Красные","WINE-001",true,false,false,,`;
+"Товар без вариаций","Описание товара",100.00,120.00,"100г","example.webp","Категория","SKU-001",true,false,false,,
+"Пицца Маргарита","Классическая пицца",450.00,,,"pizza.webp","Еда > Пицца","PIZZA-001",true,true,false,"Размер","25 см:350|30 см:450|35 см:550:600"
+"Кофе Латте","Классический латте",200.00,,,"[no_image]","Напитки > Кофе","COFFEE-001",true,false,false,"Объём","250мл:150|350мл:200|500мл:280"
+"Каберне Совиньон","Красное сухое вино",1200.00,1500.00,,"wine.webp","Напитки > Вина > Красные","WINE-001",true,false,false,,`;
 
 		res.setHeader('Content-Type', 'text/csv; charset=utf-8');
 		res.setHeader('Content-Disposition', 'attachment; filename=import_template.csv');
 		// Add BOM for Excel compatibility
 		res.send('\ufeff' + csvContent);
+	}
+});
+
+/**
+ * GET /api/admin/products/export - Export products to CSV/JSON
+ * ONLY: super-admin, editor
+ *
+ * Query params:
+ * - format: 'csv' | 'json' (default: 'csv')
+ * - mode: 'first10' | 'active' | 'all' (default: 'all')
+ * - categoryIds: comma-separated category IDs (optional)
+ */
+router.get('/export', requireRole('super-admin', 'editor'), async (req, res) => {
+	try {
+		const format = (req.query.format as string) || 'csv';
+		const mode = (req.query.mode as string) || 'all';
+		const categoryIdsParam = req.query.categoryIds as string;
+
+		// Build query conditions
+		const conditions: any[] = [];
+
+		if (mode === 'active') {
+			conditions.push(eq(products.is_active, true));
+		}
+
+		if (categoryIdsParam) {
+			const categoryIds = categoryIdsParam.split(',').map(Number).filter(n => !isNaN(n));
+			if (categoryIds.length > 0) {
+				conditions.push(sql`${products.category_id} IN (${sql.join(categoryIds.map(id => sql`${id}`), sql`, `)})`);
+			}
+		}
+
+		// Build and execute query
+		let query = db
+			.select()
+			.from(products)
+			.orderBy(asc(products.category_id), asc(products.position), asc(products.id));
+
+		if (conditions.length > 0) {
+			query = query.where(and(...conditions)) as typeof query;
+		}
+
+		if (mode === 'first10') {
+			query = query.limit(10) as typeof query;
+		}
+
+		const dbProducts = await query;
+
+		// Get all variations for exported products
+		const productIds = dbProducts.map(p => p.id);
+		let allVariations: any[] = [];
+
+		if (productIds.length > 0) {
+			allVariations = await db
+				.select()
+				.from(productVariations)
+				.where(sql`${productVariations.product_id} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`)
+				.orderBy(asc(productVariations.product_id), asc(productVariations.position));
+		}
+
+		// Group variations by product
+		const variationsByProduct = new Map<number, typeof allVariations>();
+		for (const v of allVariations) {
+			if (!variationsByProduct.has(v.product_id)) {
+				variationsByProduct.set(v.product_id, []);
+			}
+			variationsByProduct.get(v.product_id)!.push(v);
+		}
+
+		// Transform to export format
+		const exportData = dbProducts.map(p => {
+			const productVariationsList = variationsByProduct.get(p.id) || [];
+
+			return {
+				name: p.name,
+				description: p.description || '',
+				price: p.price,
+				oldPrice: p.old_price || '',
+				quantityInfo: p.quantity_info || '',
+				image: simplifyImagePath(p.image),
+				category: p.category,
+				sku: p.sku || '',
+				isActive: p.is_active,
+				showOnHome: p.show_on_home,
+				isRecommendation: p.is_recommendation,
+				variationAttribute: p.variation_attribute || '',
+				variations: formatVariationsForExport(productVariationsList)
+			};
+		});
+
+		// Generate output
+		if (format === 'json') {
+			res.setHeader('Content-Type', 'application/json; charset=utf-8');
+			res.setHeader('Content-Disposition', 'attachment; filename=products_export.json');
+			res.send(JSON.stringify(exportData, null, 2));
+		} else {
+			// CSV format
+			const csvOutput = csvStringify(exportData, {
+				header: true,
+				columns: [
+					{ key: 'name', header: 'name' },
+					{ key: 'description', header: 'description' },
+					{ key: 'price', header: 'price' },
+					{ key: 'oldPrice', header: 'oldPrice' },
+					{ key: 'quantityInfo', header: 'quantityInfo' },
+					{ key: 'image', header: 'image' },
+					{ key: 'category', header: 'category' },
+					{ key: 'sku', header: 'sku' },
+					{ key: 'isActive', header: 'isActive' },
+					{ key: 'showOnHome', header: 'showOnHome' },
+					{ key: 'isRecommendation', header: 'isRecommendation' },
+					{ key: 'variationAttribute', header: 'variationAttribute' },
+					{ key: 'variations', header: 'variations' }
+				]
+			});
+
+			res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+			res.setHeader('Content-Disposition', 'attachment; filename=products_export.csv');
+			// Add BOM for Excel compatibility
+			res.send('\ufeff' + csvOutput);
+		}
+	} catch (error: any) {
+		console.error('Error exporting products:', error);
+		res.status(500).json({
+			success: false,
+			error: error.message || 'Failed to export products'
+		});
 	}
 });
 

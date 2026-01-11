@@ -96,9 +96,9 @@
 			<p class="text-muted">Всего: {data.pagination.total}</p>
 		</div>
 		<div class="header-actions">
-			<a href="/products-admin/import" class="import-btn">
-				<span class="icon">📥</span>
-				Импорт
+			<a href="/products-admin/import-export" class="import-btn">
+				<span class="icon">📤</span>
+				Импорт/Экспорт
 			</a>
 			<Button variant="primary" onclick={openCreateModal}>+ Создать товар</Button>
 		</div>

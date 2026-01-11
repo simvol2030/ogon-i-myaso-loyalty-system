@@ -143,6 +143,19 @@ export const productsAPI = {
 	},
 
 	/**
+	 * Get export URL with filters
+	 */
+	getExportUrl(options: ExportOptions = {}): string {
+		const params = new URLSearchParams();
+		params.set('format', options.format || 'csv');
+		params.set('mode', options.mode || 'all');
+		if (options.categoryIds && options.categoryIds.length > 0) {
+			params.set('categoryIds', options.categoryIds.join(','));
+		}
+		return `${API_BASE_URL}/admin/products/export?${params.toString()}`;
+	},
+
+	/**
 	 * Upload ZIP archive with images
 	 * Returns mapping of filenames to URLs
 	 */
@@ -185,4 +198,10 @@ export interface ZipUploadResult {
 	processed: number;
 	images: { filename: string; url: string }[];
 	errors: string[];
+}
+
+export interface ExportOptions {
+	format?: 'csv' | 'json';
+	mode?: 'first10' | 'active' | 'all';
+	categoryIds?: number[];
 }

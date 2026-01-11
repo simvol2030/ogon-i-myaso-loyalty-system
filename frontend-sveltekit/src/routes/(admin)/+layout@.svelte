@@ -88,9 +88,13 @@
 					<span class="icon">📸</span>
 					<span>Истории</span>
 				</a>
-				<a href="/products-admin" class:active={$page.url.pathname.startsWith('/products-admin')} onclick={closeMobileMenu}>
+				<a href="/products-admin" class:active={$page.url.pathname === '/products-admin'} onclick={closeMobileMenu}>
 					<span class="icon">🛍️</span>
 					<span>Товары</span>
+				</a>
+				<a href="/products-admin/import-export" class:active={$page.url.pathname.startsWith('/products-admin/import-export')} onclick={closeMobileMenu}>
+					<span class="icon">📤</span>
+					<span>Импорт/Экспорт</span>
 				</a>
 				<a href="/categories" class:active={$page.url.pathname.startsWith('/categories')} onclick={closeMobileMenu}>
 					<span class="icon">📁</span>

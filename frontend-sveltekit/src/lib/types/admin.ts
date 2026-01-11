@@ -298,7 +298,9 @@ export interface ProductFormData {
  * ProductCategory - категория товаров
  */
 export interface ProductCategory {
+	id: number;
 	name: string;
+	slug?: string;
 	count: number;
 }
 
