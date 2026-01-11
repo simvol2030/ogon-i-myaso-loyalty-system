@@ -1,6 +1,6 @@
 <script lang="ts">
   import { theme, toggleTheme } from '$lib/stores/loyalty';
-  import { appName, appSlogan, logoUrl } from '$lib/stores/customization';
+  import { appName, appSlogan, logoUrl, headerPhone } from '$lib/stores/customization';
   import CartIcon from '$lib/components/loyalty/ui/CartIcon.svelte';
   import { browser } from '$app/environment';
 
@@ -11,7 +11,8 @@
 
   let { onMenuClick, onCartClick }: Props = $props();
 
-  const PHONE_NUMBER = '+79328883388';
+  // Phone number from customization store (can be changed in admin panel)
+  let phoneNumber = $derived($headerPhone.replace(/[\s\-\(\)]/g, ''));
 
   /**
    * Phone call handler with iOS Telegram WebApp compatibility
@@ -21,7 +22,7 @@
   function handlePhoneCall() {
     if (!browser) return;
 
-    const telUrl = `tel:${PHONE_NUMBER}`;
+    const telUrl = `tel:${phoneNumber}`;
 
     // Check if running inside Telegram WebApp
     const tg = (window as any).Telegram?.WebApp;

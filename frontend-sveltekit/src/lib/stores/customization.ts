@@ -61,6 +61,7 @@ export interface CustomizationData {
 	loyaltyCard: LoyaltyCardSettings;
 	productsLabel: string; // Customizable label for Products section
 	productsIcon: string; // Customizable icon for Products section (cart, shopping-bag, heart, star)
+	headerPhone: string; // Phone number displayed in header (call button)
 }
 
 // Default values (fallback if API is not available)
@@ -116,7 +117,8 @@ const defaultCustomization: CustomizationData = {
 		showShimmer: true
 	},
 	productsLabel: 'Меню',
-	productsIcon: 'cart'
+	productsIcon: 'cart',
+	headerPhone: '+7 (800) 000-00-00'
 };
 
 // SVG paths for bottom nav icons
@@ -159,6 +161,8 @@ export const productsLabel = derived(customization, $c => $c?.productsLabel || d
 export const productsIcon = derived(customization, $c => $c?.productsIcon || defaultCustomization.productsIcon);
 // BUG-3 FIX: Add fallback for loyaltyCard if undefined (defensive programming)
 export const loyaltyCardSettings = derived(customization, $c => $c?.loyaltyCard || defaultCustomization.loyaltyCard);
+// Phone number for header call button
+export const headerPhone = derived(customization, $c => $c?.headerPhone || defaultCustomization.headerPhone);
 
 /**
  * Load customization settings from API

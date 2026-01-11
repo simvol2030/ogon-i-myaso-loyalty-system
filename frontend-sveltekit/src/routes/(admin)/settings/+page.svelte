@@ -86,7 +86,10 @@
 
 		// Customizable Labels
 		productsLabel: data.settings.appearance.productsLabel || 'Товары',
-		productsIcon: data.settings.appearance.productsIcon || 'cart'
+		productsIcon: data.settings.appearance.productsIcon || 'cart',
+
+		// Contacts
+		headerPhone: data.settings.appearance.headerPhone || '+7 (800) 000-00-00'
 	});
 
 	// Preset icons for bottom nav
@@ -178,7 +181,8 @@
 			loyaltyCardBadgeBg: data.settings.appearance.loyaltyCardBadgeBg || 'rgba(255,255,255,0.95)',
 			loyaltyCardBadgeText: data.settings.appearance.loyaltyCardBadgeText || '#e55d00',
 			loyaltyCardBorderRadius: data.settings.appearance.loyaltyCardBorderRadius ?? 24,
-			loyaltyCardShowShimmer: data.settings.appearance.loyaltyCardShowShimmer ?? true
+			loyaltyCardShowShimmer: data.settings.appearance.loyaltyCardShowShimmer ?? true,
+			headerPhone: data.settings.appearance.headerPhone || '+7 (800) 000-00-00'
 		};
 	}
 
@@ -347,7 +351,8 @@
 						loyaltyCardBorderRadius: appearanceForm.loyaltyCardBorderRadius,
 						loyaltyCardShowShimmer: appearanceForm.loyaltyCardShowShimmer,
 						productsLabel: appearanceForm.productsLabel,
-						productsIcon: appearanceForm.productsIcon
+						productsIcon: appearanceForm.productsIcon,
+						headerPhone: appearanceForm.headerPhone
 					}),
 					credentials: 'include'
 				});
@@ -614,6 +619,14 @@
 								{/each}
 							</select>
 							<small>Иконка отображается в нижней панели</small>
+						</div>
+					</div>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="headerPhone">Телефон в шапке</label>
+							<input type="tel" id="headerPhone" bind:value={appearanceForm.headerPhone} maxlength="20" placeholder="+7 (999) 123-45-67" />
+							<small>Номер телефона для кнопки звонка в header</small>
 						</div>
 					</div>
 				</div>

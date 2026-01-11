@@ -240,6 +240,9 @@ router.get('/', async (req, res) => {
 				productsLabel: s.products_label,
 				productsIcon: s.products_icon,
 
+				// Contacts
+				headerPhone: s.header_phone,
+
 				// Meta
 				updatedAt: s.updated_at
 			}
@@ -324,6 +327,9 @@ router.put('/', requireRole('super-admin', 'editor'), async (req, res) => {
 		if (data.productsLabel !== undefined) updates.products_label = data.productsLabel.trim();
 		if (data.productsIcon !== undefined) updates.products_icon = data.productsIcon;
 
+		// Contacts
+		if (data.headerPhone !== undefined) updates.header_phone = data.headerPhone.trim();
+
 		// Update settings
 		await db.update(appCustomization).set(updates).where(eq(appCustomization.id, 1));
 
@@ -369,6 +375,8 @@ router.put('/', requireRole('super-admin', 'editor'), async (req, res) => {
 				loyaltyCardBadgeText: s.loyalty_card_badge_text,
 				loyaltyCardBorderRadius: s.loyalty_card_border_radius,
 				loyaltyCardShowShimmer: Boolean(s.loyalty_card_show_shimmer),
+				// Contacts
+				headerPhone: s.header_phone,
 				updatedAt: s.updated_at
 			}
 		});
@@ -390,13 +398,24 @@ router.post('/logo', requireRole('super-admin', 'editor'), upload.single('logo')
 
 		const uploadedPath = req.file.path;
 
-		// BUG FIX V2: Always save to static/logo.png ONLY (no timestamped files)
-		// This prevents logo flashing because URL never changes (/logo.png)
+		// BUG FIX V4: Save to BOTH static/ AND build/client/ directories
+		// static/ - for development and future builds
+		// build/client/ - for production (adapter-node serves from here)
 		const staticLogoPath = path.join(process.cwd(), '..', 'frontend-sveltekit', 'static', 'logo.png');
+		const buildLogoPath = path.join(process.cwd(), '..', 'frontend-sveltekit', 'build', 'client', 'logo.png');
+
+		// Process and save to static/ first
 		await sharp(uploadedPath)
 			.resize(512, 512, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
 			.png({ quality: 95 })
 			.toFile(staticLogoPath);
+
+		// Copy to build/client/ if it exists (production)
+		const buildClientDir = path.join(process.cwd(), '..', 'frontend-sveltekit', 'build', 'client');
+		if (fs.existsSync(buildClientDir)) {
+			fs.copyFileSync(staticLogoPath, buildLogoPath);
+			console.log(`[LOGO UPLOAD] Copied to build/client/logo.png`);
+		}
 
 		// Delete original uploaded file
 		fs.unlinkSync(uploadedPath);

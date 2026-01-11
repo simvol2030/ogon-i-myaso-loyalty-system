@@ -103,7 +103,10 @@ router.get('/', async (req, res) => {
 
 			// Customizable Labels
 			productsLabel: s.products_label,
-			productsIcon: s.products_icon
+			productsIcon: s.products_icon,
+
+			// Contacts
+			headerPhone: s.header_phone
 		};
 
 		// Update cache
