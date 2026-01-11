@@ -22,8 +22,8 @@
 	let highlights = $derived(storiesData?.highlights || []);
 	let hasStories = $derived(storiesData?.enabled && highlights.length > 0);
 
-	// Reactive border color - prioritize customization settings over stories API settings
-	let borderColor = $derived($storiesSettings.borderColor || settings?.borderColor || '#ff6b00');
+	// Reactive border color - always use customization store (populated from SSR or API)
+	let borderColor = $derived($storiesSettings.borderColor);
 
 	// Load stories on mount
 	onMount(async () => {

@@ -19,8 +19,8 @@
   // BUG FIX: Initialize customization immediately from server data to prevent logo flashing
   // IMPORTANT: Merge server data with defaults because server may not include all fields (navigation, loyaltyCard, etc.)
   // Only overwrite fields that are actually present in server data, preserve defaults for missing fields
-  // This runs BEFORE first render, unlike onMount which runs after
-  if (data.customization && typeof window !== 'undefined') {
+  // This runs on BOTH server (SSR) and client to ensure store is populated before first render
+  if (data.customization) {
     const defaultCustomization = get(customization); // Get current defaults
     const serverData = data.customization as Partial<CustomizationData>;
     const mergedData: CustomizationData = {
