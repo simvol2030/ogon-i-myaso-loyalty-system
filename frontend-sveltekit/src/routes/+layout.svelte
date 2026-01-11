@@ -66,7 +66,8 @@
                                 !$page.url.pathname.startsWith('/logout') &&
                                 !$page.url.pathname.startsWith('/cashier') &&
                                 !$page.url.pathname.startsWith('/seller') &&
-                                !$page.url.pathname.startsWith('/flash-'));
+                                !$page.url.pathname.startsWith('/flash-') &&
+                                !$page.url.pathname.startsWith('/reputation'));
 
   let menuOpen = $state(false);
   let qrModalOpen = $state(false);
