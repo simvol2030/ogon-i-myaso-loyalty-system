@@ -6,8 +6,11 @@ const BACKEND_URL = env.PUBLIC_BACKEND_URL || 'http://localhost:3000';
 /**
  * Data loader for Home page - API VERSION
  * Fetches recommendations, offers, products, and free delivery info from backend API
+ * NOTE: Uses parent() to inherit customization data from layout for SSR
  */
-export const load: PageServerLoad = async ({ fetch }) => {
+export const load: PageServerLoad = async ({ fetch, parent }) => {
+  // Get data from parent layout (including customization for SSR)
+  const parentData = await parent();
   // Default free delivery info
   const defaultFreeDeliveryInfo = {
     enabled: false,
@@ -53,6 +56,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
     }
 
     return {
+      ...parentData, // Include customization from layout for SSR
       recommendations: homeData.recommendations || [],
       monthOffers: homeData.monthOffers || [],
       topProducts: homeData.topProducts || [],
@@ -64,6 +68,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
     console.error('[HOME PAGE] Failed to fetch home data:', error);
     // Return empty data on error instead of failing
     return {
+      ...parentData, // Include customization from layout for SSR
       recommendations: [],
       monthOffers: [],
       topProducts: [],
