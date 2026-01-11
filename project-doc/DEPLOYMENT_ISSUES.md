@@ -3,6 +3,7 @@
 > **Проект:** ogon-i-myaso-loyalty-system
 > **Дата:** 2026-01-11
 > **Автор:** CLI Integrator
+> **См. также:** [MULTI_TENANT_ROADMAP.md](./MULTI_TENANT_ROADMAP.md) — план по упрощению развёртывания
 
 ---
 
