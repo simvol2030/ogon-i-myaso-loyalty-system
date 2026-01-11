@@ -811,6 +811,11 @@ export const appCustomization = sqliteTable('app_customization', {
 	loyalty_card_border_radius: integer('loyalty_card_border_radius').notNull().default(24),
 	loyalty_card_show_shimmer: integer('loyalty_card_show_shimmer').notNull().default(1),
 
+	// === STORIES (HIGHLIGHTS) CUSTOMIZATION ===
+	stories_border_color: text('stories_border_color').notNull().default('#ff6b00'),
+	stories_title_color_light: text('stories_title_color_light').notNull().default('#374151'),
+	stories_title_color_dark: text('stories_title_color_dark').notNull().default('#ffffff'),
+
 	// === МЕТА ===
 	updated_at: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`)
 });
