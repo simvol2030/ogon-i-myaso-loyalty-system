@@ -86,8 +86,8 @@ export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
       if (!existingUser.first_login_bonus_claimed) {
         console.log(`[API] 🎯 LEGACY USER DETECTED! Awarding ${welcomeBonus} ${pointsName}:`, existingUser.telegram_user_id);
 
-        // TASK-002 FIX: Use atomic transaction helper
-        const bonusResult = await createWelcomeBonus(
+        // TASK-002 FIX: Use atomic transaction helper (SYNC - no await for better-sqlite3)
+        const bonusResult = createWelcomeBonus(
           existingUser.id,
           welcomeBonus,
           existingUser.store_id,
@@ -183,8 +183,8 @@ export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
 
       console.log('[API] ✅ New user created, card:', cardNumber);
 
-      // TASK-002 FIX: Award welcome bonus with atomic transaction
-      const bonusResult = await createWelcomeBonus(
+      // TASK-002 FIX: Award welcome bonus with atomic transaction (SYNC - no await for better-sqlite3)
+      const bonusResult = createWelcomeBonus(
         newUser.id,
         welcomeBonus,
         userData.store_id,
