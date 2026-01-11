@@ -247,7 +247,8 @@
 				saveMessage = 'Ошибка: ' + result.error;
 			}
 		} catch (error) {
-			saveMessage = 'Ошибка загрузки логотипа';
+			console.error('[LOGO UPLOAD] Error:', error);
+			saveMessage = 'Ошибка загрузки логотипа: ' + (error instanceof Error ? error.message : String(error));
 		} finally {
 			uploadingLogo = false;
 		}
