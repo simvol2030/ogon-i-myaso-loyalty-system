@@ -135,11 +135,6 @@
       // Initialize theme
       initTheme();
 
-      // TEMPORARY FIX: Telegram initialization disabled for iPhone testing
-      // TODO: Re-enable after phone button is fixed
-      console.log('[+layout] ⚠️ TELEGRAM INITIALIZATION TEMPORARILY DISABLED FOR TESTING');
-
-      /* TEMPORARILY DISABLED FOR TESTING
       // CRITICAL: Call ensureTelegramReady() IMMEDIATELY to unblock scroll
       // This must happen BEFORE waiting for user data
       const { ensureTelegramReady, initializeUser } = await import('$lib/telegram');
@@ -173,7 +168,6 @@
         console.error('[+layout] ❌ Stack:', error instanceof Error ? error.stack : 'No stack trace');
         // Don't block app load if initialization fails
       }
-      */
 
       // Load loyalty settings (pointsName) from API
       try {
