@@ -13,6 +13,12 @@
 
   let { data } = $props();
 
+  // DEBUG: Check what customization data we have
+  $effect(() => {
+    console.log('[+page.svelte] data.customization:', data.customization);
+    console.log('[+page.svelte] stories borderColor:', data.customization?.stories?.borderColor);
+  });
+
   // Product detail sheet state
   let selectedProduct = $state<Product | null>(null);
   let productSheetOpen = $state(false);
