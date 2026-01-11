@@ -1,97 +1,132 @@
-# Granat Loyalty System
+# Ogon i Myaso Loyalty System — Codebase Context
 
-**URL:** https://granat.klik1.ru
-**Тип:** Telegram Mini App система лояльности
-**Workflow:** см. `CLAUDE.local.md`
-
----
-
-## Пути проекта
-
-| Среда | Путь |
-|-------|------|
-| **WSL** | `/home/solo18/dev/granat/project/loyalty-system` |
-| **Windows** | `C:\dev\granat\project\loyalty-system` |
-| **GitHub** | https://github.com/simvol2030/granat-loyalty-system |
-| **GitHub ветка** | `main` (единственная) |
-| **Сервер** | `/opt/websites/granat.klik1.ru` |
+**URL:** https://ogon-i-myaso.klik1.ru
+**Тип:** Telegram Mini App система лояльности для ресторана "Огонь и Мясо"
+**Workflow Developer:** см. `CLAUDE.web.md` (в этой директории)
+**Workflow CLI:** см. `../CLAUDE.local.md` (в parent директории)
 
 ---
 
-## PM2 (Production)
-
-| Процесс | Порт |
-|---------|------|
-| `granat-frontend-dev` | 3013 |
-| `granat-backend-dev` | 3012 |
-
-```bash
-source ~/.nvm/nvm.sh && pm2 restart granat-frontend-dev granat-backend-dev
-```
-
----
-
-## Доступы
-
-**Admin Panel:** https://granat.klik1.ru/login
-- Email: `admin@example.com`
-- Password: `Admin123!@#$`
-
-**Telegram Bot:** @granat_loyalty_bot
-- Token: `8274694924:AAHkHtEQPbqadquZ_yN9FxYJqsCXmGmgrCE`
-- Группа заказов: `-1003676119639`
-
-**Database:** SQLite → `/opt/websites/granat.klik1.ru/data/db/sqlite/app.db`
-
----
-
-## Структура
+## Структура проекта
 
 ```
 loyalty-system/
-├── frontend-sveltekit/   # SvelteKit 2.x + Svelte 5
-├── backend-expressjs/    # Express.js REST API
-├── telegram-bot/         # grammy bot
-└── data/db/sqlite/       # SQLite DB
+├── frontend-sveltekit/     # SvelteKit 2.x + Svelte 5
+│   ├── src/routes/         # Страницы
+│   └── src/lib/            # Компоненты, stores
+├── backend-expressjs/      # Express.js REST API
+│   ├── src/routes/         # API endpoints
+│   └── src/services/       # Бизнес-логика
+├── telegram-bot/           # Grammy bot
+│   └── src/                # Bot handlers
+├── data/
+│   ├── db/sqlite/          # SQLite БД
+│   ├── logs/               # Логи приложения
+│   └── media/              # Загруженные файлы
+├── project-doc/            # Документация сессий
+├── feedbacks/              # Feedback для Developer
+└── .claude/                # Hooks для уведомлений
 ```
 
 ---
 
 ## Tech Stack
 
-- **Frontend:** SvelteKit 2.x, Svelte 5, TypeScript, Telegram WebApp SDK
-- **Backend:** Express.js, Drizzle ORM, SQLite, JWT
-- **Bot:** grammy
-- **DevOps:** PM2, Nginx, SSH-MCP, GitHub MCP
+| Компонент | Технологии |
+|-----------|------------|
+| **Frontend** | SvelteKit 2.x, Svelte 5, TypeScript, Telegram WebApp SDK |
+| **Backend** | Express.js, Drizzle ORM, SQLite, JWT |
+| **Bot** | Grammy |
+| **DevOps** | PM2, Nginx, SSH-MCP, GitHub MCP |
 
 ---
 
-## Deploy
+## База данных
 
-```bash
-# На сервере (через SSH MCP)
-cd /opt/websites/granat.klik1.ru && git pull origin main
-cd backend-expressjs && npm install && npm run build
-cd ../frontend-sveltekit && npm install && npm run build
-source ~/.nvm/nvm.sh && pm2 restart granat-frontend-dev granat-backend-dev
+| Таблица | Описание |
+|---------|----------|
+| `users` | Пользователи системы |
+| `products` | Товары/блюда меню |
+| `categories` | Категории товаров |
+| `orders` | Заказы |
+| `transactions` | Транзакции баллов |
+| `stores` | Точки продаж |
+| `promotions` | Акции |
+| `stories` | Истории |
+
+---
+
+## .gitignore (важное)
+
+```gitignore
+# Uploads
+backend-expressjs/uploads/
+!backend-expressjs/uploads/.gitkeep
+
+# Data
+data/db/sqlite/*.db
+data/logs/
+data/media/
+
+# Build
+node_modules/
+dist/
+build/
+.svelte-kit/
+
+# Media
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+*.mp4
 ```
 
 ---
 
-## Uploads (в .gitignore)
+## API Endpoints (основные)
 
-Путь: `/opt/websites/granat.klik1.ru/backend-expressjs/uploads/`
-Бэкап: `uploads-backup-20251224.tar.gz` (12 MB)
-
-Директории: branding, products, stories, promotions, stores, campaigns, categories, feed, welcome-messages
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| POST | `/api/auth/login` | Авторизация |
+| POST | `/api/auth/telegram` | Telegram auth |
+| GET | `/api/products` | Список товаров |
+| GET | `/api/categories` | Категории |
+| POST | `/api/orders` | Создать заказ |
+| GET | `/api/user/balance` | Баланс баллов |
+| POST | `/api/transactions` | Начисление/списание |
 
 ---
 
-## НЕ ПУТАТЬ с другим проектом на сервере
+## Telegram Bot
 
-| | Этот проект | Другой проект |
-|-|-------------|---------------|
-| **URL** | granat.klik1.ru | sl-dev.bot-3.ru |
-| **Сервер** | `/opt/websites/granat.klik1.ru` | `/opt/websites/sl-dev.bot-3.ru` |
-| **GitHub** | `granat-loyalty-system` | `loyalty-system-universal` |
-| **PM2** | `granat-*` | `sl-*` |
+**Команды:**
+- `/start` — Регистрация в системе лояльности
+- `/balance` — Проверить баланс
+- `/help` — Помощь
+
+---
+
+## Доступы
+
+**Admin Panel:** https://ogon-i-myaso.klik1.ru/login
+- Email: `admin@ogon-i-myaso.ru`
+- Password: `OgonMyaso2026!`
+
+**Database:** SQLite → `/opt/websites/ogon-i-myaso.klik1.ru/data/db/sqlite/app.db`
+
+---
+
+## НЕ ПУТАТЬ
+
+| Этот проект | Другой проект |
+|-------------|---------------|
+| ogon-i-myaso.klik1.ru | granat.klik1.ru |
+| `ogon-i-myaso-loyalty-system` | `granat-loyalty-system` |
+| `ogon-*` PM2 | `granat-*` PM2 |
+
+---
+
+*Версия: 1.0 | 2026-01-11*
+*Based on granat-loyalty-system*
