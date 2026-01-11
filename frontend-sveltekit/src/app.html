@@ -6,10 +6,23 @@
 
 		<!-- Telegram Web App SDK -->
 		<script src="https://telegram.org/js/telegram-web-app.js"></script>
+		<!-- CRITICAL: Call ready() and expand() immediately to enable scrolling -->
+		<script>
+			(function() {
+				var tg = window.Telegram && window.Telegram.WebApp;
+				if (tg) {
+					tg.ready();
+					tg.expand();
+					console.log('[app.html] Telegram WebApp ready() and expand() called immediately');
+				}
+			})();
+		</script>
 
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<!-- Ensure body overflow is not blocked on load -->
+		<script>document.body.style.overflow = '';</script>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>
