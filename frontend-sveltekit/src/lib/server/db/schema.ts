@@ -798,6 +798,9 @@ export const appCustomization = sqliteTable('app_customization', {
 	products_label: text('products_label').notNull().default('Товары'),
 	products_icon: text('products_icon').notNull().default('cart'),
 
+	// === КОНТАКТЫ ===
+	header_phone: text('header_phone').notNull().default('+7 (800) 000-00-00'),
+
 	// === ВИДЖЕТ ЛОЯЛЬНОСТИ ===
 	loyalty_card_gradient_start: text('loyalty_card_gradient_start').notNull().default('#ff6b00'),
 	loyalty_card_gradient_end: text('loyalty_card_gradient_end').notNull().default('#dc2626'),
