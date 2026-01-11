@@ -17,7 +17,7 @@
 	let isRedirecting = $state(false);
 
 	// Яндекс.Карты URL для положительных оценок
-	const YANDEX_REVIEW_URL = 'https://yandex.ru/profile/82820422101/?add-review=true';
+	const YANDEX_REVIEW_URL = 'https://yandex.ru/profile/18349245777/?add-review=true';
 
 	// Маска для телефона
 	function formatPhone(value: string): string {

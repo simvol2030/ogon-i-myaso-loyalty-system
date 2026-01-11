@@ -101,6 +101,10 @@ build/
 
 ## Telegram Bot
 
+**Bot:** @Ogon_i_Mayso_bot
+**Token:** `8090127980:AAHpXs2CNT8LGG6y4liD7Dlkarnyhn4m_kE`
+**Orders Group ID:** `-1002614350260`
+
 **Команды:**
 - `/start` — Регистрация в системе лояльности
 - `/balance` — Проверить баланс
